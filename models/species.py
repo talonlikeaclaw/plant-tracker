@@ -7,5 +7,5 @@ class Species:
         self.common_name = kwargs.get("common_name")
         self.scientific_name = kwargs.get("scientific_name")
         self.sunlight = kwargs.get("sunlight")
-        self.water_requirements = kwargs.get("water_requirements")
+        self.water_requirements = kwargs.get("water")
         self.perenual_id = kwargs.get("perenual_id")
