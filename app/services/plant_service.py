@@ -32,10 +32,16 @@ def create_plant(**data):
                     ),
                 )
                 row = cursor.fetchone()
-                new_id = row["id"]
-                plant_data = {**data, "id": new_id}
-                conn.commit()
+                if row:
+                    new_id = row[0]
+                    plant_data = {**data, "id": new_id}
+                    conn.commit()
+                    return Plant(**plant_data)
+                else:
+                    print(
+                        "Insert succeeded but RETURNING id returned nothing."
+                    )
+                    return None
     except psycopg2.Error as e:
         print(f"Error inserting plant: {e}")
         return None
-    return Plant(**plant_data)
