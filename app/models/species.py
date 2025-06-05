@@ -1,11 +1,17 @@
-class Species:
-    """Represents a particular Plant species"""
+from sqlalchemy import Column, Integer, String
+from sqlalchemy.orm import relationship
+from app.models.database import Base
 
-    def __init__(self, **kwargs):
-        """Initializes a Plant Species"""
-        self.id = kwargs.get("species_id")
-        self.common_name = kwargs.get("common_name")
-        self.scientific_name = kwargs.get("scientific_name")
-        self.sunlight = kwargs.get("sunlight")
-        self.water_requirements = kwargs.get("water")
-        self.perenual_id = kwargs.get("perenual_id")
+
+class Species(Base):
+    """Represents a particular Plant species"""
+    __tablename__ = "species"
+
+    id = Column(Integer, primary_key=True, index=True)
+    common_name = Column(String, nullable=False)
+    scientific_name = Column(String)
+    sunlight = Column(String)
+    water_requirements = Column(String)
+    perenual_id = Column(Integer)
+
+    plants = relationship("Plant", back_populates="species")
