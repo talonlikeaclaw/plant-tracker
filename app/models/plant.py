@@ -17,3 +17,7 @@ class Plant(Base):
 
     user = relationship("User", back_populates="plants")
     species = relationship("Species", back_populates="plants")
+    care_logs = relationship(
+        "PlantCare",
+        back_populates="plant",
+        cascade="all, delete")
