@@ -1,12 +1,23 @@
-class Plant:
-    """Represents a User's owned Plant"""
+from sqlalchemy import Column, Integer, String, ForeignKey, Date
+from app.models.database import Base
+from sqlalchemy.orm import relationship
 
-    def __init__(self, **kwargs):
-        """Initializes a User's Plant"""
-        self.id = kwargs.get("id")
-        self.user_id = kwargs.get("user_id")
-        self.species_id = kwargs.get("species_id")
-        self.nickname = kwargs.get("nickname")
-        self.date_added = kwargs.get("date_added")
-        self.last_watered = kwargs.get("last_watered")
-        self.location = kwargs.get("location")
+
+class Plant(Base):
+    """Represents a User's owned Plant"""
+    __tablename__ = "plants"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    species_id = Column(Integer, ForeignKey("species.id"))
+    nickname = Column(String, nullable=False)
+    date_added = Column(Date)
+    last_watered = Column(Date)
+    location = Column(String)
+
+    user = relationship("User", back_populates="plants")
+    species = relationship("Species", back_populates="plants")
+    care_logs = relationship(
+        "PlantCare",
+        back_populates="plant",
+        cascade="all, delete")

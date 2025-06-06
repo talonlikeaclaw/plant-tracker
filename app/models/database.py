@@ -1,15 +1,7 @@
-import psycopg2
-from psycopg2.extras import RealDictCursor
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker, declarative_base
 from config import Config
 
-
-def get_connection():
-    """Initalizes a connection with the databse"""
-    return psycopg2.connect(
-        dbname=Config.DB_NAME,
-        user=Config.DB_USER,
-        password=Config.DB_PASSWORD,
-        host=Config.DB_HOST,
-        port=Config.DB_PORT,
-        cursor_factory=RealDictCursor,
-    )
+engine = create_engine(Config.SQLALCHEMY_DATABASE_URI, echo=True)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+Base = declarative_base()

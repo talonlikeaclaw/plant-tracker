@@ -1,13 +1,25 @@
+from sqlalchemy import Column, Integer, String, DateTime
+from sqlalchemy.orm import relationship
+from app.models.database import Base
 from flask_login import UserMixin
+from datetime import datetime, timezone
 
 
-class User(UserMixin):
+class User(Base, UserMixin):
     """Represents a User in the system"""
+    __tablename__ = "users"
 
-    def __init__(self, **kwargs):
-        """Initializes a User"""
-        self.id = kwargs.get("id")
-        self.username = kwargs.get("username")
-        self.email = kwargs.get("email")
-        self.password_hash = kwargs.get("password_hash")
-        self.created_at = kwargs.get("created_at")
+    id = Column(Integer, primary_key=True, index=True)
+    username = Column(String, nullable=False, unique=True)
+    email = Column(String, nullable=False, unique=True)
+    password_hash = Column(String, nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+    plants = relationship(
+        "Plant",
+        back_populates="user",
+        cascade="all, delete")
+    care_types = relationship(
+        "CareType",
+        back_populates="user",
+        cascade="all, delete")
