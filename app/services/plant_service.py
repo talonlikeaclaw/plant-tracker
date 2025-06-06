@@ -34,7 +34,7 @@ class PlantService:
 
         Returns:
             Plant:
-                - The created Plant object with a populated ID and commited state.
+                - The Plant object with a populated ID and commited state.
 
         Raises:
             ValueError: If required fields are missing.
@@ -54,3 +54,14 @@ class PlantService:
             self.db.rollback()
             raise
         return plant
+
+    def get_plant(self, plant_id: int) -> Plant:
+        """Fetches a single Plant by its ID.
+
+        Args:
+            plant_id (int): The primary key of the Plant to retrieve.
+
+        Returns:
+            Plant or None: Found plant or None if not found.
+        """
+        return self.db.query(Plant).filter_by(id=plant_id).first()
