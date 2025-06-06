@@ -20,7 +20,7 @@ class PlantService:
         """
         self.db = db
 
-    def create_plant(self, data: dict) -> Plant:
+    def create_plant(self, data: dict):
         """Creates a new Plant record in the database
 
         Args:
@@ -55,7 +55,7 @@ class PlantService:
             raise
         return plant
 
-    def get_plant(self, plant_id: int) -> Plant:
+    def get_plant(self, plant_id: int):
         """Fetches a single Plant by its ID.
 
         Args:
@@ -65,3 +65,14 @@ class PlantService:
             Plant or None: Found plant or None if not found.
         """
         return self.db.query(Plant).filter_by(id=plant_id).first()
+
+    def get_user_plants(self, user_id: int):
+        """Gets all plants that belong to a specific user.
+
+        Args:
+            user_id (int): User's ID.
+
+        Returns:
+            List[Plant]: All associated plants.
+        """
+        return self.db.query(Plant).filter_by(user_id=user_id).all()
