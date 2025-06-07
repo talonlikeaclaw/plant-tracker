@@ -1,6 +1,7 @@
 from app.models import Plant
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
+from typing import Optional, List
 
 
 class PlantService:
@@ -12,7 +13,7 @@ class PlantService:
     """
 
     def __init__(self, db: Session):
-        """Intializaes the PlantService with a given SQLAlchemy sessions.
+        """Initializes the PlantService with a given SQLAlchemy session.
 
         Args:
             db (Session):
@@ -20,7 +21,7 @@ class PlantService:
         """
         self.db = db
 
-    def create_plant(self, data: dict):
+    def create_plant(self, data: dict) -> Plant:
         """Creates a new Plant record in the database
 
         Args:
@@ -34,7 +35,7 @@ class PlantService:
 
         Returns:
             Plant:
-                - The Plant object with a populated ID and commited state.
+                - The Plant object with a populated ID and committed state.
 
         Raises:
             ValueError: If required fields are missing.
@@ -55,7 +56,7 @@ class PlantService:
             raise
         return plant
 
-    def get_plant(self, plant_id: int):
+    def get_plant(self, plant_id: int) -> Optional[Plant]:
         """Fetches a single Plant by its ID.
 
         Args:
@@ -66,7 +67,7 @@ class PlantService:
         """
         return self.db.query(Plant).filter_by(id=plant_id).first()
 
-    def get_user_plants(self, user_id: int):
+    def get_user_plants(self, user_id: int) -> List[Plant]:
         """Gets all plants that belong to a specific user.
 
         Args:
@@ -77,7 +78,7 @@ class PlantService:
         """
         return self.db.query(Plant).filter_by(user_id=user_id).all()
 
-    def update_plant(self, plant_id: int, updates: dict):
+    def update_plant(self, plant_id: int, updates: dict) -> Optional[Plant]:
         """Updates fields of an existing plant.
 
         Args:
@@ -103,7 +104,7 @@ class PlantService:
             raise
         return plant
 
-    def delete_plant(self, plant_id: int):
+    def delete_plant(self, plant_id: int) -> bool:
         """Deletes a plant from the database.
 
         Args:
