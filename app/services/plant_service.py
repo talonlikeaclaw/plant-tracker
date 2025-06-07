@@ -102,3 +102,20 @@ class PlantService:
             self.db.rollback()
             raise
         return plant
+
+    def delete_plant(self, plant_id: int):
+        """Deletes a plant from the database.
+
+        Args:
+            plant_id (int): ID of the plant to delete.
+
+        Returns:
+            bool: True if deleted, False if not found.
+        """
+        plant = self.get_plant(plant_id)
+        if not plant:
+            return False
+
+        self.db.delete(plant)
+        self.db.commit()
+        return True
