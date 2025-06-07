@@ -76,3 +76,29 @@ class PlantService:
             List[Plant]: All associated plants.
         """
         return self.db.query(Plant).filter_by(user_id=user_id).all()
+
+    def update_plant(self, plant_id: int, updates: dict):
+        """Updates fields of an existing plant.
+
+        Args:
+            plant_id (int): ID of the plant to update.
+            updates (dict): Fields to update.
+
+        Returns:
+            Plant or None: Updated plant or None if not found.
+        """
+        plant = self.get_plant(plant_id)
+        if not plant:
+            return None
+
+        for key, value in updates.items():
+            if hasattr(plant, key):
+                setattr(plant, key, value)
+
+        try:
+            self.db.commit()
+            self.db.refresh(plant)
+        except IntegrityError:
+            self.db.rollback()
+            raise
+        return plant
