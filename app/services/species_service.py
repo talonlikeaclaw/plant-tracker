@@ -63,3 +63,11 @@ class SpeciesService:
             Species or None: Found Species or None if not found.
         """
         return self.db.query(Species).filter_by(id=species_id).first()
+
+    def get_all_species(self) -> List[Species]:
+        """Fetches all Species from the database.
+
+        Returns:
+            List[Species] or []: All species in a list or an empty list.
+        """
+        return self.db.query(Species).all()
