@@ -20,3 +20,35 @@ class SpeciesService:
                 - An active SQLAlchemy session.
         """
         self.db = db
+
+    def create_species(self, data: dict) -> Species:
+        """Creates a new Species record in the database.
+
+        Args:
+            data (dict): A dictionary containing the fields for the Species:
+                - 'common_name' (str, required)
+                - 'scientific_name' (str, optional)
+                - 'sunlight' (str, optional)
+                - 'water_requirements' (str, optional)
+                - 'perenual_id' (int, optional)
+
+        Returns:
+            Species:
+                - The Species object with a populated ID and commited state.
+
+        Raises:
+            ValueError: If required field is missing.
+            IntegrityError: If database constraints are violated.
+        """
+        if not data.get("common_name"):
+            raise ValueError("common_name is required")
+
+        species = Species(**data)
+        self.db.add(species)
+        try:
+            self.db.commit()
+            self.db.refresh(species)
+        except IntegrityError:
+            self.db.rollback()
+            raise
+        return species
