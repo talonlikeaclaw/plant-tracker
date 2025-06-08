@@ -52,3 +52,14 @@ class SpeciesService:
             self.db.rollback()
             raise
         return species
+
+    def get_plant(self, species_id: int) -> Optional[Species]:
+        """Fetches a single Species by its ID.
+
+        Args:
+            species_id (int): The primary key of the Species to retrieve.
+
+        Returns:
+            Species or None: Found Species or None if not found.
+        """
+        return self.db.query(Species).filter_by(id=species_id).first()
