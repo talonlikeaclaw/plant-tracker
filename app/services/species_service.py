@@ -97,3 +97,20 @@ class SpeciesService:
             self.db.rollback()
             raise
         return species
+
+    def delete_species(self, species_id: int) -> bool:
+        """Deletes a species from the database.
+
+        Args:
+            species_id (int): ID of the species to delete.
+
+        Returns:
+            bool: True if deleted, False if not found.
+        """
+        species = self.get_species(species_id)
+        if not species:
+            return False
+
+        self.db.delete(species)
+        self.db.commit()
+        return True
