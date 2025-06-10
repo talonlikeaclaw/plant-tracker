@@ -71,3 +71,29 @@ class SpeciesService:
             List[Species] or []: All species in a list or an empty list.
         """
         return self.db.query(Species).all()
+
+    def update_species(self, species_id: int, updates: dict) -> Optional[Species]:
+        """Updates fields of an existing species.
+
+        Args:
+            species_id (int): ID of the species to update.
+            updates (dict): Fields to update.
+
+        Returns:
+            Species or None: Updated species or None if not found.
+        """
+        species = self.get_species(species_id)
+        if not species:
+            return None
+
+        for key, value in updates.items():
+            if hasattr(species, key):
+                setattr(species, key, value)
+
+        try:
+            self.db.commit()
+            self.db.refresh(species)
+        except IntegrityError:
+            self.db.rollback()
+            raise
+        return species
