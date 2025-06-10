@@ -53,7 +53,7 @@ class SpeciesService:
             raise
         return species
 
-    def get_plant(self, species_id: int) -> Optional[Species]:
+    def get_species(self, species_id: int) -> Optional[Species]:
         """Fetches a single Species by its ID.
 
         Args:
