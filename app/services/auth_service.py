@@ -26,3 +26,16 @@ class AuthService:
             str: The hashed password.
         """
         return generate_password_hash(plain_password)
+
+    def verify_password(self, plain_password: str, hashed_password: str) -> bool:
+        """
+        Checks if a plaintext password matches the hashed one.
+
+        Args:
+            plain_password (str): Password from login input.
+            hashed_password (str): Stored password hash.
+
+        Returns:
+            bool: True if match, else False.
+        """
+        return check_password_hash(hashed_password, plain_password)
