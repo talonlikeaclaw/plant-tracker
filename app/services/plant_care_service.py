@@ -1,7 +1,8 @@
-from app.models import PlantCare, species
+from app.models import PlantCare
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from typing import Optional, List
+from datetime import date
 
 
 class PlantCareService:
@@ -45,6 +46,9 @@ class PlantCareService:
         if not data.get("care_type_id"):
             raise ValueError("care_type_id is required")
 
+        if not data.get("care_date"):
+            data["care_date"] = date.today()
+
         care_log = PlantCare(**data)
         self.db.add(care_log)
         try:
@@ -77,7 +81,12 @@ class PlantCareService:
             List[PlantCare] or []:
                 - All care logs for the plant, or an empty list.
         """
-        return self.db.query(PlantCare).filter_by(plant_id=plant_id).all()
+        return (
+            self.db.query(PlantCare)
+            .filter_by(plant_id=plant_id)
+            .order_by(PlantCare.care_date.desc())
+            .all()
+        )
 
     def update_care_log(self, care_id: int, updates: dict) -> Optional[PlantCare]:
         """Updates fields of an existing care log.
