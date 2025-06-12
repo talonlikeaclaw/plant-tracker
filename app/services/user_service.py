@@ -82,3 +82,11 @@ class UserService:
             User or None: Found User or None if not found.
         """
         return self.db.query(User).filter_by(email=email).first()
+
+    def get_all_users(self) -> List[User]:
+        """Fetches all Users from the database.
+
+        Returns:
+            List[User] or []: All Users in a list or an empty list.
+        """
+        return self.db.query(User).all()
