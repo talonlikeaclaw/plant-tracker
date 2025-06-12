@@ -116,3 +116,20 @@ class UserService:
             self.db.rollback()
             raise
         return user
+
+    def delete_user(self, user_id: int) -> bool:
+        """Deletes a User from the database.
+
+        Args:
+            user_id (int): ID of the User to delete.
+
+        Returns:
+            bool: True if deleted, False if not found.
+        """
+        user = self.get_user_by_id(user_id)
+        if not user:
+            return False
+
+        self.db.delete(user)
+        self.db.commit()
+        return True
