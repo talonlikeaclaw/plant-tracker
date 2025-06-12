@@ -65,3 +65,16 @@ class PlantCareService:
             PlantCare or None: Found PlantCare or None if not found.
         """
         return self.db.query(PlantCare).filter_by(id=care_id).first()
+
+    def get_plant_care_logs(self, plant_id: int) -> List[PlantCare]:
+        """Fetches all PlantCare logs for a specified Plant.
+
+        Args:
+            plant_id (int):
+                - The primary key of the plant to get the care logs for.
+
+        Returns:
+            List[PlantCare] or []:
+                - All care logs for the plant, or an empty list.
+        """
+        return self.db.query(PlantCare).filter_by(plant_id=plant_id).all()
