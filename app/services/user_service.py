@@ -14,7 +14,7 @@ class UserService:
     """
 
     def __init__(self, db: Session):
-        """Initializes the SpeciesService with a given SQLAlchemy session.
+        """Initializes the UserService with a given SQLAlchemy session.
 
         Args:
             db (Session):
