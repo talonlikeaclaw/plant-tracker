@@ -3,8 +3,6 @@ from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from typing import Optional, List
 
-from app.models.plant import Plant
-
 
 class PlantCareService:
     """Service class that handles business logic for PlantCare operations.
@@ -23,7 +21,7 @@ class PlantCareService:
         """
         self.db = db
 
-    def create_plant_care(self, data: dict) -> PlantCare:
+    def create_care_log(self, data: dict) -> PlantCare:
         """Creates a new PlantCare record in the database.
 
         Args:
@@ -47,23 +45,23 @@ class PlantCareService:
         if not data.get("care_type_id"):
             raise ValueError("care_type_id is required")
 
-        plant_care = PlantCare(**data)
-        self.db.add(plant_care)
+        care_log = PlantCare(**data)
+        self.db.add(care_log)
         try:
             self.db.commit()
-            self.db.refresh(plant_care)
+            self.db.refresh(care_log)
         except IntegrityError:
             self.db.rollback()
             raise
-        return plant_care
+        return care_log
 
-    def get_plant_care(self, plant_care_id: int) -> Optional[PlantCare]:
+    def get_care_log_by_id(self, care_id: int) -> Optional[PlantCare]:
         """Fetches a single PlantCare by its ID.
 
         Args:
-            plant_care_id (int): The primary key of the PlantCare to retrieve.
+            care_id (int): The primary key of the PlantCare to retrieve.
 
         Returns:
             PlantCare or None: Found PlantCare or None if not found.
         """
-        return self.db.query(PlantCare).filter_by(id=plant_care_id).first()
+        return self.db.query(PlantCare).filter_by(id=care_id).first()
