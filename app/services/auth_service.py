@@ -39,3 +39,19 @@ class AuthService:
             bool: True if match, else False.
         """
         return check_password_hash(hashed_password, plain_password)
+
+    def authenticate_user(self, email: str, password: str) -> Optional[User]:
+        """
+        Verifies a user's credentials.
+
+        Args:
+            email (str): User's email.
+            password (str): Raw input password.
+
+        Returns:
+            User or None: The authenticated user if credentials are valid.
+        """
+        user = self.user_service.get_user_by_email(email)
+        if user and self.verify_password(password, user.password_hash):  # type: ignore
+            return user
+        return None
