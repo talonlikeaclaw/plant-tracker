@@ -3,6 +3,8 @@ from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from typing import Optional, List
 
+from app.models.plant import Plant
+
 
 class PlantCareService:
     """Service class that handles business logic for PlantCare operations.
@@ -54,3 +56,14 @@ class PlantCareService:
             self.db.rollback()
             raise
         return plant_care
+
+    def get_plant_care(self, plant_care_id: int) -> Optional[PlantCare]:
+        """Fetches a single PlantCare by its ID.
+
+        Args:
+            plant_care_id (int): The primary key of the PlantCare to retrieve.
+
+        Returns:
+            PlantCare or None: Found PlantCare or None if not found.
+        """
+        return self.db.query(PlantCare).filter_by(id=plant_care_id).first()
