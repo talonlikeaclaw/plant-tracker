@@ -1,4 +1,4 @@
-from app.models import PlantCare
+from app.models import PlantCare, species
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from typing import Optional, List
@@ -78,3 +78,29 @@ class PlantCareService:
                 - All care logs for the plant, or an empty list.
         """
         return self.db.query(PlantCare).filter_by(plant_id=plant_id).all()
+
+    def update_care_log(self, care_id: int, updates: dict) -> Optional[PlantCare]:
+        """Updates fields of an existing care log.
+
+        Args:
+            care_id (int): ID of the care log to update.
+            updates (dict): Fields to update.
+
+        Returns:
+            PlantCare or None: Updated care log or None if not found.
+        """
+        care_log = self.get_care_log_by_id(care_id)
+        if not care_log:
+            return None
+
+        for key, value in updates.items():
+            if hasattr(care_log, key):
+                setattr(care_log, key, value)
+
+        try:
+            self.db.commit()
+            self.db.refresh(care_log)
+        except IntegrityError:
+            self.db.rollback()
+            raise
+        return care_log
