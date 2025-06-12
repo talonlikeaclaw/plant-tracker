@@ -2,6 +2,7 @@ from app.models import User
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from typing import Optional, List
+from datetime import date
 
 
 class UserService:
@@ -20,3 +21,42 @@ class UserService:
                 - An active SQLAlchemy session.
         """
         self.db = db
+
+    def create_user(self, data: dict) -> User:
+        """Creates a new User record in the database.
+
+        Args:
+            data (dict): A dictionary containing the fields for the User:
+                - 'username' (str, required, unique)
+                - 'email' (str, required, unique)
+                - 'password_hash' (str, required)
+                - 'created_at' (date, auto)
+
+        Returns:
+            User:
+                - The User object with a populated ID and commited state.
+
+        Raises:
+            ValueError: If required field is missing.
+            IntegrityError: If database constraints are violated.
+        """
+        if not data.get("username"):
+            raise ValueError("username is required")
+
+        if not data.get("email"):
+            raise ValueError("email is required")
+
+        if not data.get("password_hash"):
+            raise ValueError("password_hash is required")
+
+        data["created_at"] = date.today()
+
+        user = User(**data)
+        self.db.add(user)
+        try:
+            self.db.commit()
+            self.db.refresh(user)
+        except IntegrityError:
+            self.db.rollback()
+            raise
+        return user
