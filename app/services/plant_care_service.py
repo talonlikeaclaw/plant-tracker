@@ -104,3 +104,20 @@ class PlantCareService:
             self.db.rollback()
             raise
         return care_log
+
+    def delete_care_log(self, care_id: int) -> bool:
+        """Deletes a care log from the database.
+
+        Args:
+            care_id (int): ID of the care log to delete.
+
+        Returns:
+            bool: True if deleted, False if not found.
+        """
+        care_log = self.get_care_log_by_id(care_id)
+        if not care_log:
+            return False
+
+        self.db.delete(care_log)
+        self.db.commit()
+        return True
