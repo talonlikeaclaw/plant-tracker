@@ -62,7 +62,7 @@ class UserService:
         return user
 
     def get_user_by_id(self, user_id: int) -> Optional[User]:
-        """Fetches a single User by its ID.
+        """Fetches a single User by their ID.
 
         Args:
             user_id (int): The primary key of the User to retrieve.
@@ -71,3 +71,14 @@ class UserService:
             User or None: Found User or None if not found.
         """
         return self.db.query(User).filter_by(id=user_id).first()
+
+    def get_user_by_email(self, email: str) -> Optional[User]:
+        """Fetches a single User by their email.
+
+        Args:
+            email (str): The email of the User to retrieve.
+
+        Returns:
+            User or None: Found User or None if not found.
+        """
+        return self.db.query(User).filter_by(email=email).first()
