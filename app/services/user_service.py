@@ -90,3 +90,29 @@ class UserService:
             List[User] or []: All Users in a list or an empty list.
         """
         return self.db.query(User).all()
+
+    def update_user(self, user_id: int, updates: dict) -> Optional[User]:
+        """Updates fields of an existing User.
+
+        Args:
+            user_id (int): ID of the User to update.
+            updates (dict): Fields to update.
+
+        Returns:
+            User or None: Updated User or None if not found.
+        """
+        user = self.get_user_by_id(user_id)
+        if not user:
+            return None
+
+        for key, value in updates.items():
+            if hasattr(user, key):
+                setattr(user, key, value)
+
+        try:
+            self.db.commit()
+            self.db.refresh(user)
+        except IntegrityError:
+            self.db.rollback()
+            raise
+        return user
