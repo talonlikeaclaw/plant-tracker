@@ -34,7 +34,7 @@ def register():
         )
 
         # Issue JWT token
-        access_token = create_access_token(identity=new_user.id)
+        access_token = create_access_token(identity=str(new_user.id))
 
         # Respond
         return jsonify(
@@ -80,7 +80,7 @@ def login():
             return jsonify({"error": "invalid email or password"}), 401
 
         # Issue JWT access token
-        access_token = create_access_token(identity=user.id)
+        access_token = create_access_token(identity=str(user.id))
 
         # Respond
         return jsonify(
