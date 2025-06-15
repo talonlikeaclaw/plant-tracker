@@ -85,7 +85,7 @@ def login():
         # Respond
         return jsonify(
             {
-                "message": f"User {user.username} logged in successfully!",
+                "message": f"User ({user.username}) logged in successfully!",
                 "access_token": access_token,
                 "user": {"id": user.id, "username": user.username, "email": user.email},
             }
