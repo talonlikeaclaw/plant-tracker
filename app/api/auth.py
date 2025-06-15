@@ -9,11 +9,7 @@ auth_bp = Blueprint("auth", __name__)
 
 @auth_bp.route("/register", methods=["POST"])
 def register():
-    """Registers a new user and returns a JWT access token.
-
-    Returns:
-        JWT access token and new user infomation in JSON.
-    """
+    """Registers a new user and returns a JWT access token."""
     db = SessionLocal()
     user_service = UserService(db)
     auth_service = AuthService(user_service)
@@ -40,10 +36,10 @@ def register():
         # Issue JWT token
         access_token = create_access_token(identity=new_user.id)
 
-        # Respone
+        # Respond
         return jsonify(
             {
-                "message": "User registered successfully",
+                "message": "User registered successfully!",
                 "access_token": access_token,
                 "user": {
                     "id": new_user.id,
@@ -89,7 +85,7 @@ def login():
         # Respond
         return jsonify(
             {
-                "message": f"{user.username} logged in!",
+                "message": f"User {user.username} logged in successfully!",
                 "access_token": access_token,
                 "user": {"id": user.id, "username": user.username, "email": user.email},
             }
