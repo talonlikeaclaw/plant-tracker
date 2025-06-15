@@ -58,3 +58,44 @@ def register():
 
     finally:
         db.close()
+
+
+@auth_bp.route("/login", methods=["POST"])
+def login():
+    """Authenticates user and returns a JWT access token."""
+    db = SessionLocal()
+    user_service = UserService(db)
+    auth_service = AuthService(user_service)
+
+    try:
+        data = request.get_json()
+
+        email = data.get("email")
+        password = data.get("password")
+
+        # Validate fields
+        if not email or not password:
+            return jsonify({"error": "email and password are required"}), 400
+
+        # Authenticate user
+        user = auth_service.authenticate_user(email, password)
+
+        if not user:
+            return jsonify({"error": "invalid email or password"}), 401
+
+        # Issue JWT access token
+        access_token = create_access_token(identity=user.id)
+
+        # Respond
+        return jsonify(
+            {
+                "message": f"{user.username} logged in!",
+                "access_token": access_token,
+                "user": {"id": user.id, "username": user.username, "email": user.email},
+            }
+        ), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+
+    finally:
+        db.close()
