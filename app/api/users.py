@@ -45,3 +45,60 @@ def get_user(user_id):
 
     finally:
         db.close()
+
+
+@user_bp.route("/<int:user_id>", methods=["PATCH"])
+@jwt_required()
+def update_user(user_id):
+    """Updates a User's information.
+
+    Args:
+        user_id (int): The ID of the User to update.
+    """
+    db = SessionLocal()
+    user_service = UserService(db)
+
+    try:
+        # Ensure only current user can update their profile
+        current_user_id = int(get_jwt_identity())
+        if current_user_id != user_id:
+            return jsonify({"error": "Unauthorized"}), 403
+
+        # Parse and validate fields
+        data = request.get_json()
+        username = data.get("username")
+        email = data.get("email")
+
+        if not username and not email:
+            return jsonify({"error": "Provide at least one field to update"}), 400
+
+        # Create updates dictionary
+        updates = {}
+        if username:
+            updates["username"] = username
+        if email:
+            updates["email"] = email
+
+        # Update User
+        updated_user = user_service.update_user(user_id, updates)
+
+        if not updated_user:
+            return jsonify({"error": "Failed to update user"}), 400
+
+        # Respond
+        return jsonify(
+            {
+                "message": "User info updated successfully!",
+                "user": {
+                    "id": updated_user.id,
+                    "username": updated_user.username,
+                    "email": updated_user.email,
+                },
+            }
+        ), 200
+    except Exception as e:
+        db.rollback()
+        return jsonify({"error": str(e)}), 400
+
+    finally:
+        db.close()
