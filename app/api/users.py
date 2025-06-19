@@ -19,7 +19,16 @@ def get_user(user_id):
     user_service = UserService(db)
 
     # Ensure User can only see their own information.
-    current_user_id = int(get_jwt_identity())
+    current_user_id = get_jwt_identity()
+
+    if current_user_id is None:
+        return jsonify({"error": "Unauthorized: no identity in token"}), 401
+
+    try:
+        current_user_id = int(current_user_id)
+    except (TypeError, ValueError):
+        return jsonify({"error": "Unauthorized: invalid identity in token"}), 401
+
     if current_user_id != user_id:
         return jsonify({"error": "Unauthorized"}), 403
 
@@ -60,7 +69,16 @@ def update_user(user_id):
 
     try:
         # Ensure only current user can update their profile
-        current_user_id = int(get_jwt_identity())
+        current_user_id = get_jwt_identity()
+
+        if current_user_id is None:
+            return jsonify({"error": "Unauthorized: no identity in token"}), 401
+
+        try:
+            current_user_id = int(current_user_id)
+        except (TypeError, ValueError):
+            return jsonify({"error": "Unauthorized: invalid identity in token"}), 401
+
         if current_user_id != user_id:
             return jsonify({"error": "Unauthorized"}), 403
 
@@ -116,7 +134,16 @@ def update_password(user_id):
     user_service = UserService(db)
     auth_service = AuthService(user_service)
 
-    current_user_id = int(get_jwt_identity())
+    current_user_id = get_jwt_identity()
+
+    if current_user_id is None:
+        return jsonify({"error": "Unauthorized: no identity in token"}), 401
+
+    try:
+        current_user_id = int(current_user_id)
+    except (TypeError, ValueError):
+        return jsonify({"error": "Unauthorized: invalid identity in token"}), 401
+
     if current_user_id != user_id:
         return jsonify({"error": "Unauthorized"}), 403
 
