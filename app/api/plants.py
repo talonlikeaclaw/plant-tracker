@@ -178,3 +178,66 @@ def get_plant(plant_id):
 
     finally:
         db.close()
+
+
+@plant_bp.route("/<int:plant_id>", methods=["PATCH"])
+@jwt_required()
+def update_plant(plant_id):
+    """Updates a Plant's information.
+
+    Args:
+        plant_id (int): The ID of the Plant to update.
+    """
+    db = SessionLocal()
+    plant_service = PlantService(db)
+
+    current_user_id = get_jwt_identity()
+    if current_user_id is None:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    try:
+        current_user_id = int(current_user_id)
+    except (TypeError, ValueError):
+        return jsonify({"error": "Invalid token identity"}), 401
+
+    try:
+        plant = plant_service.get_plant(plant_id)
+
+        if not plant:
+            return jsonify({"error": "Plant not found"}), 404
+
+        if plant.user_id != current_user_id:  # type: ignore
+            return jsonify({"error": "Unauthorized access to this plant"}), 403
+
+        data = request.get_json()
+        allowed_fields = ["nickname", "location", "species_id", "last_watered"]
+        updates = {k: v for k, v in data.items() if k in allowed_fields}
+
+        if not updates:
+            return jsonify({"error": "No valid fields to update"}), 400
+
+        updated_plant = plant_service.update_plant(plant_id, updates)
+
+        if not updated_plant:
+            return jsonify({"error": "Updated plant was not found"}), 500
+
+        return jsonify({
+            "message": "Plant updated successfully!",
+            "plant": {
+                "id": updated_plant.id,
+                "nickname": updated_plant.nickname,
+                "species_id": updated_plant.species_id,
+                "location": updated_plant.location,
+                "date_added": updated_plant.date_added.isoformat()
+                if update_plant.date_added else None,  # type: ignore
+                "last_watered": updated_plant.last_watered.isoformat()
+                if updated_plant.last_watered else None  # type: ignore
+            }
+        }), 200
+
+    except Exception as e:
+        db.rollback()
+        return jsonify({"error": str(e)}), 400
+
+    finally:
+        db.close()
