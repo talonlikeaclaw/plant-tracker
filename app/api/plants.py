@@ -124,3 +124,57 @@ def create_plant():
 
     finally:
         db.close()
+
+
+@plant_bp.route("/<int:plant_id>", methods=["GET"])
+@jwt_required()
+def get_plant(plant_id):
+    """Gets a Plant by its ID and returns its info.
+
+    Args:
+        plant_id (int): The ID of the Plant to retrieve.
+    """
+    db = SessionLocal()
+    plant_service = PlantService(db)
+
+    # Ensure User can only see their plants information.
+    current_user_id = get_jwt_identity()
+
+    if current_user_id is None:
+        return jsonify({"error": "Unauthorized: no identity in token"}), 401
+
+    try:
+        current_user_id = int(current_user_id)
+    except (TypeError, ValueError):
+        return jsonify({"error":
+                        "Unauthorized: invalid identity in token"}), 401
+
+    try:
+        plant = plant_service.get_plant(plant_id)
+
+        if not plant:
+            return jsonify({"error": "Plant not found"}), 404
+
+        if plant.user_id != current_user_id:  # type: ignore
+            return jsonify({"error":
+                            "Unauthorized: plant does not belong to you"}), 403
+
+        # Respond
+        return jsonify({
+            "plant": {
+                "id": plant.id,
+                "nickname": plant.nickname,
+                "species_id": plant.species_id,
+                "location": plant.location,
+                "date_added": plant.date_added.isoformat()
+                if plant.date_added else None,  # type: ignore
+                "last_watered": plant.last_watered.isoformat()
+                if plant.last_watered else None  # type: ignore
+            }
+        }), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+
+    finally:
+        db.close()
