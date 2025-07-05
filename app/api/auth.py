@@ -24,7 +24,8 @@ def register():
         # Validate fields
         if not username or not email or not password:
             return jsonify(
-                {"error": "The username, email, and password fields are required"}
+                {"error":
+                 "The username, email, and password fields are required"}
             ), 400
 
         # Hash password
@@ -32,7 +33,8 @@ def register():
 
         # Create User
         new_user = user_service.create_user(
-            {"username": username, "email": email, "password_hash": hashed_password}
+            {"username": username, "email": email,
+                "password_hash": hashed_password}
         )
 
         # Issue JWT token
@@ -73,7 +75,8 @@ def login():
 
         # Validate fields
         if not email or not password:
-            return jsonify({"error": "The email and password fields are required"}), 400
+            return jsonify({"error":
+                            "The email and password fields are required"}), 400
 
         # Authenticate user
         user = auth_service.authenticate_user(email, password)
@@ -89,7 +92,9 @@ def login():
             {
                 "message": f"User ({user.username}) logged in successfully!",
                 "access_token": access_token,
-                "user": {"id": user.id, "username": user.username, "email": user.email},
+                "user": {"id": user.id,
+                         "username": user.username,
+                         "email": user.email},
             }
         ), 200
     except Exception as e:
