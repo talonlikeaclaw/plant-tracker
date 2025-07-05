@@ -18,12 +18,14 @@ def get_plants():
         user_id = get_jwt_identity()
 
         if user_id is None:
-            return jsonify({"error": "Unauthorized: no identity in token"}), 401
+            return jsonify({"error":
+                            "Unauthorized: no identity in token"}), 401
 
         try:
             user_id = int(user_id)
         except (TypeError, ValueError):
-            return jsonify({"error": "Unauthorized: invalid identity in token"}), 401
+            return jsonify({"error":
+                            "Unauthorized: invalid identity in token"}), 401
 
         # Get Plants
         plants = plant_service.get_user_plants(user_id)
@@ -38,11 +40,9 @@ def get_plants():
                     "species_id": plant.species_id,
                     "location": plant.location,
                     "date_added": plant.date_added.isoformat()
-                    if plant.date_added
-                    else None,
+                    if plant.date_added else None,  # type: ignore
                     "last_watered": plant.last_watered.isoformat()
-                    if plant.last_watered
-                    else None,
+                    if plant.last_watered else None,  # type: ignore
                 }
             )
 
@@ -68,12 +68,14 @@ def create_plant():
         user_id = get_jwt_identity()
 
         if user_id is None:
-            return jsonify({"error": "Unauthorized: no identity in token"}), 401
+            return jsonify({"error":
+                            "Unauthorized: no identity in token"}), 401
 
         try:
             user_id = int(user_id)
         except (TypeError, ValueError):
-            return jsonify({"error": "Unauthorized: invalid identity in token"}), 401
+            return jsonify({"error":
+                            "Unauthorized: invalid identity in token"}), 401
 
         # Get request data
         data = request.get_json()
@@ -101,23 +103,20 @@ def create_plant():
         new_plant = plant_service.create_plant(plant_data)
 
         # Respond
-        return jsonify(
-            {
-                "message": "Plant created successfully!",
-                "plant": {
-                    "id": new_plant.id,
-                    "nickname": new_plant.nickname,
-                    "species_id": new_plant.species_id,
-                    "location": new_plant.location,
-                    "date_added": new_plant.date_added.isoformat()
-                    if new_plant.date_added
-                    else None,
-                    "last_watered": new_plant.last_watered.isoformat()
-                    if new_plant.last_watered
-                    else None,
-                },
+        return jsonify({
+            "message": "Plant created successfully!",
+            "plant": {
+                "id": new_plant.id,
+                "nickname": new_plant.nickname,
+                "species_id": new_plant.species_id,
+                "location": new_plant.location,
+                "date_added": new_plant.date_added.isoformat()
+                if new_plant.date_added else None,  # type: ignore
+                "last_watered": new_plant.last_watered.isoformat()
+                if new_plant.last_watered else None  # type: ignore
+
             }
-        ), 201
+        }), 201
 
     except Exception as e:
         db.rollback()
