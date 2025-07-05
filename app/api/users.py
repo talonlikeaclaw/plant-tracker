@@ -27,7 +27,8 @@ def get_user(user_id):
     try:
         current_user_id = int(current_user_id)
     except (TypeError, ValueError):
-        return jsonify({"error": "Unauthorized: invalid identity in token"}), 401
+        return jsonify({"error":
+                        "Unauthorized: invalid identity in token"}), 401
 
     if current_user_id != user_id:
         return jsonify({"error": "Unauthorized"}), 403
@@ -72,12 +73,14 @@ def update_user(user_id):
         current_user_id = get_jwt_identity()
 
         if current_user_id is None:
-            return jsonify({"error": "Unauthorized: no identity in token"}), 401
+            return jsonify({"error":
+                            "Unauthorized: no identity in token"}), 401
 
         try:
             current_user_id = int(current_user_id)
         except (TypeError, ValueError):
-            return jsonify({"error": "Unauthorized: invalid identity in token"}), 401
+            return jsonify({"error":
+                            "Unauthorized: invalid identity in token"}), 401
 
         if current_user_id != user_id:
             return jsonify({"error": "Unauthorized"}), 403
@@ -88,7 +91,8 @@ def update_user(user_id):
         email = data.get("email")
 
         if not username and not email:
-            return jsonify({"error": "Provide at least one field to update"}), 400
+            return jsonify({"error":
+                            "Provide at least one field to update"}), 400
 
         # Create updates dictionary
         updates = {}
@@ -142,7 +146,8 @@ def update_password(user_id):
     try:
         current_user_id = int(current_user_id)
     except (TypeError, ValueError):
-        return jsonify({"error": "Unauthorized: invalid identity in token"}), 401
+        return jsonify({"error":
+                        "Unauthorized: invalid identity in token"}), 401
 
     if current_user_id != user_id:
         return jsonify({"error": "Unauthorized"}), 403
@@ -155,12 +160,16 @@ def update_password(user_id):
         new_password = data.get("new_password")
         confirm_password = data.get("confirm_password")
 
-        if not email or not old_password or not new_password or not confirm_password:
-            return jsonify({"error": "All fields are required"}), 400
+        if not (
+            email and old_password and new_password and confirm_password
+        ):
+            return jsonify({"error":
+                            "All fields are required"}), 400
 
         if new_password != confirm_password:
             return jsonify(
-                {"error": "The new_password and confirm_passwond fields must match."}
+                {"error":
+                 "The new_password and confirm_passwond fields must match."}
             ), 400
 
         user = auth_service.authenticate_user(email, old_password)
