@@ -241,3 +241,46 @@ def update_plant(plant_id):
 
     finally:
         db.close()
+
+
+@plant_bp.route("/<int:plant_id>", methods=["DELETE"])
+@jwt_required()
+def delete_plant(plant_id):
+    """Deletes a User's plant.
+
+    Args:
+        plant_id (int): The ID of the Plant to delete.
+    """
+    db = SessionLocal()
+    plant_service = PlantService(db)
+
+    current_user_id = get_jwt_identity()
+    if current_user_id is None:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    try:
+        current_user_id = int(current_user_id)
+    except (TypeError, ValueError):
+        return jsonify({"error": "Invalid token identity"}), 401
+
+    try:
+        plant = plant_service.get_plant(plant_id)
+
+        if not plant:
+            return jsonify({"error": "Plant not found"}), 404
+
+        if plant.user_id != current_user_id:  # type: ignore
+            return jsonify({"error": "Unauthorized access to this plant"}), 403
+
+        deleted = plant_service.delete_plant(plant_id)
+
+        if not deleted:
+            return jsonify({"error": "Plant was not deleted"}), 404
+
+        return jsonify({"message": "Plant deleted successfully!"}), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+
+    finally:
+        db.close()
