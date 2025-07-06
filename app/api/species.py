@@ -127,6 +127,7 @@ def get_a_species(species_id):
     db = SessionLocal()
     species_service = SpeciesService(db)
 
+    # Validate user identity
     current_user_id = get_jwt_identity()
 
     if current_user_id is None:
@@ -137,8 +138,8 @@ def get_a_species(species_id):
     except (TypeError, ValueError):
         return jsonify({"error":
                         "Unauthorized: invalid identity in token"}), 401
-
     try:
+        # Get species and validate it exists
         species = species_service.get_species(species_id)
 
         if not species:
@@ -182,7 +183,6 @@ def update_species(species_id):
         current_user_id = int(current_user_id)
     except (TypeError, ValueError):
         return jsonify({"error": "Invalid token identity"}), 401
-
     try:
         # Ensure species exists
         species = species_service.get_species(species_id)
@@ -219,6 +219,50 @@ def update_species(species_id):
 
     except Exception as e:
         db.rollback()
+        return jsonify({"error": str(e)}), 400
+
+    finally:
+        db.close()
+
+
+@species_bp.route("/<int:species_id>", methods=["DELETE"])
+@jwt_required()
+def delete_species(species_id):
+    """Deletes a User's species.
+
+    Args:
+        species_id (int): The ID of the Species to delete.
+    """
+    db = SessionLocal()
+    species_service = SpeciesService(db)
+
+    # Validate user identity
+    current_user_id = get_jwt_identity()
+    if current_user_id is None:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    try:
+        current_user_id = int(current_user_id)
+    except (TypeError, ValueError):
+        return jsonify({"error": "Invalid token identity"}), 401
+
+    try:
+        # Verify species exists and user owns it
+        species = species_service.get_species(species_id)
+
+        if not species:
+            return jsonify({"error": "Species not found"}), 404
+
+        # Delete species and verify delete worked
+        deleted = species_service.delete_species(species_id)
+
+        if not deleted:
+            return jsonify({"error": "Species was not deleted"}), 404
+
+        # Respond
+        return jsonify({"message": "Species deleted successfully!"}), 200
+
+    except Exception as e:
         return jsonify({"error": str(e)}), 400
 
     finally:
