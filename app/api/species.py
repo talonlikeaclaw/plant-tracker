@@ -160,3 +160,66 @@ def get_a_species(species_id):
 
     finally:
         db.close()
+
+
+@species_bp.route("/<int:species_id>", methods=["PATCH"])
+@jwt_required()
+def update_species(species_id):
+    """Updates a Species' information.
+
+    Args:
+        species_id (int): The ID of the Species to update.
+    """
+    db = SessionLocal()
+    species_service = SpeciesService(db)
+
+    # Validate user identity
+    current_user_id = get_jwt_identity()
+    if current_user_id is None:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    try:
+        current_user_id = int(current_user_id)
+    except (TypeError, ValueError):
+        return jsonify({"error": "Invalid token identity"}), 401
+
+    try:
+        # Ensure species exists
+        species = species_service.get_species(species_id)
+
+        if not species:
+            return jsonify({"error": "Species not found"}), 404
+
+        # Get and validate request data
+        data = request.get_json()
+        allowed_fields = ["common_name", "scientific_name",
+                          "sunlight", "water_requirements"]
+        updates = {k: v for k, v in data.items() if k in allowed_fields}
+
+        if not updates:
+            return jsonify({"error": "No valid fields to update"}), 400
+
+        # Update species and validate success
+        updated_species = species_service.update_species(species_id, updates)
+
+        if not updated_species:
+            return jsonify({"error": "Updated species was not found"}), 500
+
+        # Respond
+        return jsonify({
+            "message": "Species updated successfully!",
+            "species": {
+                "id": updated_species.id,
+                "common_name": updated_species.common_name,
+                "scientific_name": updated_species.scientific_name,
+                "sunlight": updated_species.sunlight,
+                "water_requirements": updated_species.water_requirements
+            }
+        }), 200
+
+    except Exception as e:
+        db.rollback()
+        return jsonify({"error": str(e)}), 400
+
+    finally:
+        db.close()
