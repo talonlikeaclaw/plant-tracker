@@ -140,6 +140,7 @@ def get_plant(plant_id):
     # Ensure User can only see their plants information.
     current_user_id = get_jwt_identity()
 
+    # Validate user identity
     if current_user_id is None:
         return jsonify({"error": "Unauthorized: no identity in token"}), 401
 
@@ -150,6 +151,7 @@ def get_plant(plant_id):
                         "Unauthorized: invalid identity in token"}), 401
 
     try:
+        # Get Plant and validate it
         plant = plant_service.get_plant(plant_id)
 
         if not plant:
@@ -191,6 +193,7 @@ def update_plant(plant_id):
     db = SessionLocal()
     plant_service = PlantService(db)
 
+    # Validate user identity.
     current_user_id = get_jwt_identity()
     if current_user_id is None:
         return jsonify({"error": "Unauthorized"}), 401
@@ -201,6 +204,7 @@ def update_plant(plant_id):
         return jsonify({"error": "Invalid token identity"}), 401
 
     try:
+        # Validate Plant exists and user owns it
         plant = plant_service.get_plant(plant_id)
 
         if not plant:
@@ -209,6 +213,7 @@ def update_plant(plant_id):
         if plant.user_id != current_user_id:  # type: ignore
             return jsonify({"error": "Unauthorized access to this plant"}), 403
 
+        # Get request data and validate
         data = request.get_json()
         allowed_fields = ["nickname", "location", "species_id", "last_watered"]
         updates = {k: v for k, v in data.items() if k in allowed_fields}
@@ -216,11 +221,13 @@ def update_plant(plant_id):
         if not updates:
             return jsonify({"error": "No valid fields to update"}), 400
 
+        # Update Plant
         updated_plant = plant_service.update_plant(plant_id, updates)
 
         if not updated_plant:
             return jsonify({"error": "Updated plant was not found"}), 500
 
+        # Respond
         return jsonify({
             "message": "Plant updated successfully!",
             "plant": {
@@ -229,7 +236,7 @@ def update_plant(plant_id):
                 "species_id": updated_plant.species_id,
                 "location": updated_plant.location,
                 "date_added": updated_plant.date_added.isoformat()
-                if update_plant.date_added else None,  # type: ignore
+                if updated_plant.date_added else None,  # type: ignore
                 "last_watered": updated_plant.last_watered.isoformat()
                 if updated_plant.last_watered else None  # type: ignore
             }
@@ -254,6 +261,7 @@ def delete_plant(plant_id):
     db = SessionLocal()
     plant_service = PlantService(db)
 
+    # Validate user identity
     current_user_id = get_jwt_identity()
     if current_user_id is None:
         return jsonify({"error": "Unauthorized"}), 401
@@ -264,6 +272,7 @@ def delete_plant(plant_id):
         return jsonify({"error": "Invalid token identity"}), 401
 
     try:
+        # Verify plant exists and user owns it
         plant = plant_service.get_plant(plant_id)
 
         if not plant:
@@ -272,11 +281,13 @@ def delete_plant(plant_id):
         if plant.user_id != current_user_id:  # type: ignore
             return jsonify({"error": "Unauthorized access to this plant"}), 403
 
+        # Delete plant and verify delete worked
         deleted = plant_service.delete_plant(plant_id)
 
         if not deleted:
             return jsonify({"error": "Plant was not deleted"}), 404
 
+        # Respond
         return jsonify({"message": "Plant deleted successfully!"}), 200
 
     except Exception as e:
