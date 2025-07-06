@@ -1,0 +1,53 @@
+from flask import Blueprint, request, jsonify
+from flask_jwt_extended import get_jwt_identity, jwt_required
+from app.models.database import SessionLocal
+from app.services.species_service import SpeciesService
+
+species_bp = Blueprint("species", __name__)
+
+
+@species_bp.route("", methods=["GET"])
+@jwt_required()
+def get_species():
+    """Gets all species in the database."""
+    db = SessionLocal()
+    species_service = SpeciesService(db)
+
+    try:
+        # Validate user identity
+        user_id = get_jwt_identity()
+
+        if user_id is None:
+            return jsonify({"error":
+                            "Unauthorized: no identity in token"}), 401
+
+        try:
+            user_id = int(user_id)
+        except (TypeError, ValueError):
+            return jsonify({"error":
+                            "Unauthorized: invalid identity in token"}), 401
+
+        # Get all species
+        species = species_service.get_all_species()
+
+        # Convert Species into List of Dictionaries
+        species_list = []
+        for current_species in species:
+            species_list.append(
+                {
+                    "id": current_species.id,
+                    "common_name": current_species.common_name,
+                    "scientific_name": current_species.scientific_name,
+                    "sunlight": current_species.sunlight,
+                    "water_requirements": current_species.water_requirements,
+                }
+            )
+
+        # Respond
+        return jsonify({"species": species_list}), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+
+    finally:
+        db.close()
