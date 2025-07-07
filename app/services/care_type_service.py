@@ -50,3 +50,46 @@ class CareTypeService:
             self.db.rollback()
             raise
         return care_type
+
+    def get_care_type_by_id(self, care_type_id: int) -> Optional[CareType]:
+        """Fetches a single CareType by its ID.
+
+        Args:
+            care_type_id (int): The primary key of the CareType to retrieve.
+
+        Returns:
+            CareType or None: Found CareType or None if not found.
+        """
+        return self.db.query(CareType).filter_by(id=care_type_id).first()
+
+    def get_care_types_by_user_id(self, user_id: int) -> List[CareType]:
+        """Fetches all CareTypes for a particular User.
+
+        Args:
+            user_id (int):
+                - The primary key of the User to get the Care Types for.
+
+        Returns:
+            List[CareType] or []:
+                - All Care Types for the User, or an empty list.
+        """
+        return (
+            self.db.query(CareType)
+            .filter_by(user_id=user_id)
+            .order_by(CareType.name.desc())
+            .all()
+        )
+
+    def get_default_care_types(self) -> List[CareType]:
+        """Fetches all CareTypes without a user_id associated with them.
+
+        Returns:
+            List[CareType]:
+                - All default Care Types not bound to a User
+        """
+        return (
+            self.db.query(CareType)
+            .filter_by(user_id=None)
+            .order_by(CareType.name.desc())
+            .all()
+        )
