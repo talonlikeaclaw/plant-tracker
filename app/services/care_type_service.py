@@ -1,7 +1,6 @@
-from sqlalchemy import false
-from app.models import CareType
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
+from app.models import CareType
 from typing import Optional, List
 
 
@@ -39,7 +38,7 @@ class CareTypeService:
             ValueError: If required field is missing.
             IntegrityError: If database constraints are violated.
         """
-        if not data.get("name"):
+        if not data.get("name") or not data["name"].strip():
             raise ValueError("name is required")
 
         care_type = CareType(**data)
