@@ -59,6 +59,81 @@ def get_care_logs_by_plant(plant_id):
 
     finally:
         db.close()
+
+
+@plant_care_bp.route("", methods=["POST"])
+@jwt_required()
+def create_care_log():
+    """Creates a new Care Log."""
+    db = SessionLocal()
+    plant_care_service = PlantCareService(db)
+    plant_service = PlantService(db)
+
+    try:
+        # Validate user identity
+        user_id = get_jwt_identity()
+
+        if user_id is None:
+            return jsonify({"error":
+                            "Unauthorized: no identity in token"}), 401
+
+        try:
+            user_id = int(user_id)
+        except (TypeError, ValueError):
+            return jsonify({"error":
+                            "Unauthorized: invalid identity in token"}), 401
+
+        # Get request data
+        data = request.get_json()
+
+        plant_id = data.get("plant_id")
+        care_type_id = data.get("care_type_id")
+        note = data.get("note")
+        care_date = data.get("care_date")
+
+        # Validate required fields
+        if not plant_id or not care_type_id:
+            return jsonify(
+                {"error": "The plant_id and care_type_id fields are required."}
+            ), 400
+
+        # Ensure user owns Plant
+        plant = plant_service.get_plant(plant_id)
+        if plant.user_id != user_id:  # type: ignore
+            return jsonify({"error":
+                            "Unauthorized access to this plant."}), 403
+
+        # Prepare Care Log data
+        care_log_data = {
+            "plant_id": plant_id,
+            "care_type_id": care_type_id,
+            "note": note,
+            "care_date": care_date
+        }
+
+        new_care_log = plant_care_service.create_care_log(care_log_data)
+
+        # Respond
+        return jsonify({
+            "message": "Care Log created successfully!",
+            "species": {
+                "id": new_care_log.id,
+                "plant_id": new_care_log.plant_id,
+                "care_type_id": new_care_log.care_type_id,
+                "note": new_care_log.note,
+                "care_date": new_care_log.care_date.isoformat()
+                if new_care_log.care_date else None,  # type: ignore
+            }
+        }), 201
+
+    except Exception as e:
+        db.rollback()
+        return jsonify({"error": str(e)}), 400
+
+    finally:
+        db.close()
+
+
 @plant_care_bp.route("/<int:care_log_id>", methods=["GET"])
 @jwt_required()
 def get_care_log(care_log_id):
