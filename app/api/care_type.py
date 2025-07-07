@@ -97,6 +97,50 @@ def get_user_care_types():
         db.close()
 
 
+@care_type_bp.route("/<int:care_type_id>", methods=["GET"])
+@jwt_required()
+def get_care_type_by_id(care_type_id):
+    """Gets a Care Type by its ID."""
+    db = SessionLocal()
+    care_type_service = CareTypeService(db)
+
+    try:
+        # Validate User identity
+        user_id = get_jwt_identity()
+
+        if user_id is None:
+            return jsonify({"error":
+                            "Unauthorized: no identity in token"}), 401
+
+        try:
+            user_id = int(user_id)
+        except (TypeError, ValueError):
+            return jsonify({"error":
+                            "Unauthorized: invalid identity in token"}), 401
+
+        # Get Care Type
+        care_type = care_type_service.get_care_type_by_id(care_type_id)
+
+        if not care_type:
+            return jsonify({"error": "Care type not found"}), 404
+
+        # Respond
+        return jsonify({
+            "care_type": {
+                "id": care_type.id,
+                "user_id": care_type.user_id,
+                "name": care_type.name,
+                "description": care_type.description,
+            }
+        }), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+
+    finally:
+        db.close()
+
+
 @care_type_bp.route("", methods=["POST"])
 @jwt_required()
 def create_care_type():
@@ -142,7 +186,7 @@ def create_care_type():
         # Respond
         return jsonify({
             "message": "Care Type created successfully!",
-            "species": {
+            "care_type": {
                 "id": new_care_type.id,
                 "user_id": new_care_type.user_id,
                 "name": new_care_type.name,
@@ -152,62 +196,6 @@ def create_care_type():
 
     except Exception as e:
         db.rollback()
-        return jsonify({"error": str(e)}), 400
-
-    finally:
-        db.close()
-
-
-@plant_care_bp.route("/<int:care_log_id>", methods=["GET"])
-@jwt_required()
-def get_care_log(care_log_id):
-    """Gets a Care Log by its ID and returns its info.
-
-    Args:
-        care_log_id (int): The ID of the Care Log to retrieve.
-    """
-    db = SessionLocal()
-    plant_care_service = PlantCareService(db)
-    plant_service = PlantService(db)
-
-    # Validate user identity
-    current_user_id = get_jwt_identity()
-
-    if current_user_id is None:
-        return jsonify({"error": "Unauthorized: no identity in token"}), 401
-
-    try:
-        current_user_id = int(current_user_id)
-    except (TypeError, ValueError):
-        return jsonify({"error":
-                        "Unauthorized: invalid identity in token"}), 401
-    try:
-        # Get Care Log and validate it exists
-        care_log = plant_care_service.get_care_log_by_id(care_log_id)
-
-        if not care_log:
-            return jsonify({"error": "Care log not found"}), 404
-
-        # Validate User is accessing Care Log for a Plant they own
-        plant_id = care_log.plant_id  # type: ignore
-        plant = plant_service.get_plant(plant_id)  # type: ignore
-
-        if plant.user_id != current_user_id:  # type: ignore
-            return jsonify({"error":
-                            "Unauthorized access to this care log."}), 403
-
-        # Respond
-        return jsonify({
-            "care_log": {
-                "id": care_log.id,
-                "plant_id": care_log.plant_id,
-                "care_type_id": care_log.care_type_id,
-                "note": care_log.note,
-                "care_date": care_log.care_date.isoformat(),
-            }
-        }), 201
-
-    except Exception as e:
         return jsonify({"error": str(e)}), 400
 
     finally:
