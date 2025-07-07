@@ -266,3 +266,53 @@ def update_care_type(care_type_id):
 
     finally:
         db.close()
+
+
+@care_type_bp.route("/<int:care_type_id>", methods=["DELETE"])
+@jwt_required()
+def delete_care_type(care_type_id):
+    """Deletes a User's Care Type by ID.
+
+    Args:
+        care_type_id (int): The ID of the Care Type to delete.
+    """
+    db = SessionLocal()
+    care_type_service = CareTypeService(db)
+
+    # Validate user identity
+    current_user_id = get_jwt_identity()
+    if current_user_id is None:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    try:
+        current_user_id = int(current_user_id)
+    except (TypeError, ValueError):
+        return jsonify({"error": "Invalid token identity"}), 401
+
+    try:
+        # Verify Care Type exists and user owns it
+        care_type = care_type_service.get_care_type_by_id(care_type_id)
+
+        if not care_type:
+            return jsonify({"error": "Care Type not found"}), 404
+
+        if care_type.user_id != current_user_id:  # type: ignore
+            return jsonify(
+                {"error":
+                 "Unauthorized: Care Type does not belong to you"}
+            ), 403
+
+        # Delete Care Type and verify delete worked
+        deleted = care_type_service.delete_care_type(care_type_id)
+
+        if not deleted:
+            return jsonify({"error": "Care Type was not deleted"}), 404
+
+        # Respond
+        return jsonify({"message": "Care Type deleted successfully!"}), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+
+    finally:
+        db.close()
