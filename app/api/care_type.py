@@ -200,3 +200,69 @@ def create_care_type():
 
     finally:
         db.close()
+
+
+@care_type_bp.route("/<int:care_type_id>", methods=["PATCH"])
+@jwt_required()
+def update_care_type(care_type_id):
+    """Updates a Care Type's information.
+
+    Args:
+        care_type_id (int): The ID of the Care Type to update.
+    """
+    db = SessionLocal()
+    care_type_service = CareTypeService(db)
+
+    # Validate user identity
+    current_user_id = get_jwt_identity()
+    if current_user_id is None:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    try:
+        current_user_id = int(current_user_id)
+    except (TypeError, ValueError):
+        return jsonify({"error": "Invalid token identity"}), 401
+    try:
+        # Ensure Care Type exists
+        care_type = care_type_service.get_care_type_by_id(care_type_id)
+
+        if not care_type:
+            return jsonify({"error": "Care Type not found"}), 404
+
+        if care_type.user_id != current_user_id:  # type: ignore
+            return jsonify(
+                {"error": "Unauthorized: Care Type does not belong to you."}
+            ), 400
+
+        # Get and validate request data
+        data = request.get_json()
+        allowed_fields = ["name", "description"]
+        updates = {k: v for k, v in data.items() if k in allowed_fields}
+
+        if not updates:
+            return jsonify({"error": "No valid fields to update"}), 400
+
+        # Update Care Type and validate success
+        updated_care_type = care_type_service.update_care_type(
+            care_type_id, updates)
+
+        if not updated_care_type:
+            return jsonify({"error": "Updated Care Type was not found"}), 500
+
+        # Respond
+        return jsonify({
+            "message": "Care Type updated successfully!",
+            "care_type": {
+                "id": updated_care_type.id,
+                "user_id": updated_care_type.user_id,
+                "name": updated_care_type.name,
+                "description": updated_care_type.description
+            }
+        }), 200
+
+    except Exception as e:
+        db.rollback()
+        return jsonify({"error": str(e)}), 400
+
+    finally:
+        db.close()
