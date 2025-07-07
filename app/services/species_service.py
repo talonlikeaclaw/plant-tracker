@@ -30,7 +30,6 @@ class SpeciesService:
                 - 'scientific_name' (str, optional)
                 - 'sunlight' (str, optional)
                 - 'water_requirements' (str, optional)
-                - 'perenual_id' (int, optional)
 
         Returns:
             Species:
