@@ -263,3 +263,57 @@ def update_care_log(care_log_id):
 
     finally:
         db.close()
+
+
+@plant_care_bp.route("/<int:care_log_id>", methods=["DELETE"])
+@jwt_required()
+def delete_care_log(care_log_id):
+    """Deletes a Plant's Care Log by ID.
+
+    Args:
+        care_log_id (int): The ID of the Care Log to delete.
+    """
+    db = SessionLocal()
+    plant_care_service = PlantCareService(db)
+    plant_service = PlantService(db)
+
+    # Validate user identity
+    current_user_id = get_jwt_identity()
+    if current_user_id is None:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    try:
+        current_user_id = int(current_user_id)
+    except (TypeError, ValueError):
+        return jsonify({"error": "Invalid token identity"}), 401
+
+    try:
+        # Verify Care Log exists and user owns it
+        care_log = plant_care_service.get_care_log_by_id(care_log_id)
+
+        if not care_log:
+            return jsonify({"error": "Care Log not found"}), 404
+
+        plant = plant_service.get_plant(care_log.plant_id)  # type: ignore
+
+        if not plant:
+            return jsonify({"error": "Plant not found"}), 404
+
+        if plant.user_id != current_user_id:  # type: ignore
+            return jsonify({"error":
+                            "Unauthorized: plant does not belong to you"}), 403
+
+        # Delete Care Log and verify delete worked
+        deleted = plant_care_service.delete_care_log(care_log_id)
+
+        if not deleted:
+            return jsonify({"error": "Care Log was not deleted"}), 404
+
+        # Respond
+        return jsonify({"message": "Care Log deleted successfully!"}), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+
+    finally:
+        db.close()
