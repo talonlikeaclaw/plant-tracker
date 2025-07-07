@@ -1,3 +1,4 @@
+from sqlalchemy import false
 from app.models import CareType
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
@@ -93,3 +94,46 @@ class CareTypeService:
             .order_by(CareType.name.desc())
             .all()
         )
+
+    def update_care_type(self, care_type_id: int, updates: dict) -> Optional[CareType]:
+        """Updates fields of an existing Care Type.
+
+        Args:
+            care_type_id (int): ID of the Care Type to update.
+            updates (dict): Fields to update.
+
+        Returns:
+            CareType or None: Updated Care Log or None if not found.
+        """
+        care_type = self.get_care_type_by_id(care_type_id)
+        if not care_type:
+            return None
+
+        for key, value in updates.items():
+            if hasattr(care_type, key):
+                setattr(care_type, key, value)
+
+        try:
+            self.db.commit()
+            self.db.refresh(care_type)
+        except IntegrityError:
+            self.db.rollback()
+            raise
+        return care_type
+
+    def delete_care_type(self, care_type_id: int) -> bool:
+        """Deletes a Care Type from the database.
+
+        Args:
+            care_type_id (int): ID of the Care Type to delete.
+
+        Returns:
+            bool: True if deleted, False if not found.
+        """
+        care_type = self.get_care_type_by_id(care_type_id)
+        if not care_type:
+            return False
+
+        self.db.delete(care_type)
+        self.db.commit()
+        return True
