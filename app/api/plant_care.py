@@ -59,3 +59,57 @@ def get_care_logs_by_plant(plant_id):
 
     finally:
         db.close()
+@plant_care_bp.route("/<int:care_log_id>", methods=["GET"])
+@jwt_required()
+def get_care_log(care_log_id):
+    """Gets a Care Log by its ID and returns its info.
+
+    Args:
+        care_log_id (int): The ID of the Care Log to retrieve.
+    """
+    db = SessionLocal()
+    plant_care_service = PlantCareService(db)
+    plant_service = PlantService(db)
+
+    # Validate user identity
+    current_user_id = get_jwt_identity()
+
+    if current_user_id is None:
+        return jsonify({"error": "Unauthorized: no identity in token"}), 401
+
+    try:
+        current_user_id = int(current_user_id)
+    except (TypeError, ValueError):
+        return jsonify({"error":
+                        "Unauthorized: invalid identity in token"}), 401
+    try:
+        # Get Care Log and validate it exists
+        care_log = plant_care_service.get_care_log_by_id(care_log_id)
+
+        if not care_log:
+            return jsonify({"error": "Care log not found"}), 404
+
+        # Validate User is accessing Care Log for a Plant they own
+        plant_id = care_log.plant_id  # type: ignore
+        plant = plant_service.get_plant(plant_id)  # type: ignore
+
+        if plant.user_id != current_user_id:  # type: ignore
+            return jsonify({"error":
+                            "Unauthorized access to this care log."}), 403
+
+        # Respond
+        return jsonify({
+            "care_log": {
+                "id": care_log.id,
+                "plant_id": care_log.plant_id,
+                "care_type_id": care_log.care_type_id,
+                "note": care_log.note,
+                "care_date": care_log.care_date.isoformat(),
+            }
+        }), 201
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+
+    finally:
+        db.close()
