@@ -137,7 +137,7 @@ def update_password(user_id):
 
         if user.id != user_id:
             return jsonify({
-                "error": "Unauthorized: You may only update you own password"
+                "error": "Unauthorized: You may only update your own password"
             }), 403
 
         hashed_password = auth_service.hash_password(new_password)
