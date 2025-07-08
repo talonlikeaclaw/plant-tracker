@@ -93,7 +93,7 @@ def create_care_log(user_id):
         # Respond
         return jsonify({
             "message": "Care Log created successfully!",
-            "species": {
+            "care_log": {
                 "id": new_care_log.id,
                 "plant_id": new_care_log.plant_id,
                 "care_type_id": new_care_log.care_type_id,
