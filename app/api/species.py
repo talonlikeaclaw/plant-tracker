@@ -1,5 +1,6 @@
 from flask import Blueprint, request, jsonify
-from flask_jwt_extended import get_jwt_identity, jwt_required
+from flask_jwt_extended import jwt_required
+from app.decorators.auth import require_user_id
 from app.models.database import SessionLocal
 from app.services.species_service import SpeciesService
 
@@ -8,25 +9,13 @@ species_bp = Blueprint("species", __name__)
 
 @species_bp.route("", methods=["GET"])
 @jwt_required()
-def get_species():
+@require_user_id
+def get_species(user_id):
     """Gets all species in the database."""
     db = SessionLocal()
     species_service = SpeciesService(db)
 
     try:
-        # Validate user identity
-        user_id = get_jwt_identity()
-
-        if user_id is None:
-            return jsonify({"error":
-                            "Unauthorized: no identity in token"}), 401
-
-        try:
-            user_id = int(user_id)
-        except (TypeError, ValueError):
-            return jsonify({"error":
-                            "Unauthorized: invalid identity in token"}), 401
-
         # Get all species
         species = species_service.get_all_species()
 
@@ -55,25 +44,13 @@ def get_species():
 
 @species_bp.route("", methods=["POST"])
 @jwt_required()
-def create_species():
+@require_user_id
+def create_species(user_id):
     """Creates a new species."""
     db = SessionLocal()
     species_service = SpeciesService(db)
 
     try:
-        # Validate user identity
-        user_id = get_jwt_identity()
-
-        if user_id is None:
-            return jsonify({"error":
-                            "Unauthorized: no identity in token"}), 401
-
-        try:
-            user_id = int(user_id)
-        except (TypeError, ValueError):
-            return jsonify({"error":
-                            "Unauthorized: invalid identity in token"}), 401
-
         # Get request data
         data = request.get_json()
 
@@ -118,7 +95,8 @@ def create_species():
 
 @species_bp.route("/<int:species_id>", methods=["GET"])
 @jwt_required()
-def get_a_species(species_id):
+@require_user_id
+def get_a_species(user_id, species_id):
     """Gets a Species by its ID and returns its info.
 
     Args:
@@ -127,17 +105,6 @@ def get_a_species(species_id):
     db = SessionLocal()
     species_service = SpeciesService(db)
 
-    # Validate user identity
-    current_user_id = get_jwt_identity()
-
-    if current_user_id is None:
-        return jsonify({"error": "Unauthorized: no identity in token"}), 401
-
-    try:
-        current_user_id = int(current_user_id)
-    except (TypeError, ValueError):
-        return jsonify({"error":
-                        "Unauthorized: invalid identity in token"}), 401
     try:
         # Get species and validate it exists
         species = species_service.get_species(species_id)
@@ -165,7 +132,8 @@ def get_a_species(species_id):
 
 @species_bp.route("/<int:species_id>", methods=["PATCH"])
 @jwt_required()
-def update_species(species_id):
+@require_user_id
+def update_species(user_id, species_id):
     """Updates a Species' information.
 
     Args:
@@ -174,15 +142,6 @@ def update_species(species_id):
     db = SessionLocal()
     species_service = SpeciesService(db)
 
-    # Validate user identity
-    current_user_id = get_jwt_identity()
-    if current_user_id is None:
-        return jsonify({"error": "Unauthorized"}), 401
-
-    try:
-        current_user_id = int(current_user_id)
-    except (TypeError, ValueError):
-        return jsonify({"error": "Invalid token identity"}), 401
     try:
         # Ensure species exists
         species = species_service.get_species(species_id)
@@ -227,7 +186,8 @@ def update_species(species_id):
 
 @species_bp.route("/<int:species_id>", methods=["DELETE"])
 @jwt_required()
-def delete_species(species_id):
+@require_user_id
+def delete_species(user_id, species_id):
     """Deletes a User's species.
 
     Args:
@@ -235,16 +195,6 @@ def delete_species(species_id):
     """
     db = SessionLocal()
     species_service = SpeciesService(db)
-
-    # Validate user identity
-    current_user_id = get_jwt_identity()
-    if current_user_id is None:
-        return jsonify({"error": "Unauthorized"}), 401
-
-    try:
-        current_user_id = int(current_user_id)
-    except (TypeError, ValueError):
-        return jsonify({"error": "Invalid token identity"}), 401
 
     try:
         # Verify species exists and user owns it

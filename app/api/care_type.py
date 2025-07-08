@@ -1,5 +1,6 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import get_jwt_identity, jwt_required
+from app.decorators.auth import require_user_id
 from app.models.database import SessionLocal
 from app.services.care_type_service import CareTypeService
 
@@ -8,25 +9,13 @@ care_type_bp = Blueprint("care_type", __name__)
 
 @care_type_bp.route("/default/", methods=["GET"])
 @jwt_required()
-def get_default_care_types():
+@require_user_id
+def get_default_care_types(user_id):
     """Gets all of the Care Types without a user_id."""
     db = SessionLocal()
     care_type_service = CareTypeService(db)
 
     try:
-        # Validate User identity
-        user_id = get_jwt_identity()
-
-        if user_id is None:
-            return jsonify({"error":
-                            "Unauthorized: no identity in token"}), 401
-
-        try:
-            user_id = int(user_id)
-        except (TypeError, ValueError):
-            return jsonify({"error":
-                            "Unauthorized: invalid identity in token"}), 401
-
         # Get all Care Types
         care_types = care_type_service.get_default_care_types()
 
@@ -54,25 +43,13 @@ def get_default_care_types():
 
 @care_type_bp.route("/user/", methods=["GET"])
 @jwt_required()
-def get_user_care_types():
+@require_user_id
+def get_user_care_types(user_id):
     """Gets all of the Care Types for a user."""
     db = SessionLocal()
     care_type_service = CareTypeService(db)
 
     try:
-        # Validate User identity
-        user_id = get_jwt_identity()
-
-        if user_id is None:
-            return jsonify({"error":
-                            "Unauthorized: no identity in token"}), 401
-
-        try:
-            user_id = int(user_id)
-        except (TypeError, ValueError):
-            return jsonify({"error":
-                            "Unauthorized: invalid identity in token"}), 401
-
         # Get all Care Types
         care_types = care_type_service.get_care_types_by_user_id(user_id)
 
@@ -99,25 +76,13 @@ def get_user_care_types():
 
 @care_type_bp.route("/<int:care_type_id>", methods=["GET"])
 @jwt_required()
-def get_care_type_by_id(care_type_id):
+@require_user_id
+def get_care_type_by_id(user_id, care_type_id):
     """Gets a Care Type by its ID."""
     db = SessionLocal()
     care_type_service = CareTypeService(db)
 
     try:
-        # Validate User identity
-        user_id = get_jwt_identity()
-
-        if user_id is None:
-            return jsonify({"error":
-                            "Unauthorized: no identity in token"}), 401
-
-        try:
-            user_id = int(user_id)
-        except (TypeError, ValueError):
-            return jsonify({"error":
-                            "Unauthorized: invalid identity in token"}), 401
-
         # Get Care Type
         care_type = care_type_service.get_care_type_by_id(care_type_id)
 
@@ -143,25 +108,13 @@ def get_care_type_by_id(care_type_id):
 
 @care_type_bp.route("", methods=["POST"])
 @jwt_required()
-def create_care_type():
+@require_user_id
+def create_care_type(user_id):
     """Creates a new Care Type."""
     db = SessionLocal()
     care_type_service = CareTypeService(db)
 
     try:
-        # Validate user identity
-        user_id = get_jwt_identity()
-
-        if user_id is None:
-            return jsonify({"error":
-                            "Unauthorized: no identity in token"}), 401
-
-        try:
-            user_id = int(user_id)
-        except (TypeError, ValueError):
-            return jsonify({"error":
-                            "Unauthorized: invalid identity in token"}), 401
-
         # Get request data
         data = request.get_json()
 
@@ -204,7 +157,8 @@ def create_care_type():
 
 @care_type_bp.route("/<int:care_type_id>", methods=["PATCH"])
 @jwt_required()
-def update_care_type(care_type_id):
+@require_user_id
+def update_care_type(user_id, care_type_id):
     """Updates a Care Type's information.
 
     Args:
@@ -229,7 +183,7 @@ def update_care_type(care_type_id):
         if not care_type:
             return jsonify({"error": "Care Type not found"}), 404
 
-        if care_type.user_id != current_user_id:  # type: ignore
+        if care_type.user_id != user_id:  # type: ignore
             return jsonify(
                 {"error": "Unauthorized: Care Type does not belong to you."}
             ), 400
@@ -270,7 +224,8 @@ def update_care_type(care_type_id):
 
 @care_type_bp.route("/<int:care_type_id>", methods=["DELETE"])
 @jwt_required()
-def delete_care_type(care_type_id):
+@require_user_id
+def delete_care_type(user_id, care_type_id):
     """Deletes a User's Care Type by ID.
 
     Args:
@@ -279,16 +234,6 @@ def delete_care_type(care_type_id):
     db = SessionLocal()
     care_type_service = CareTypeService(db)
 
-    # Validate user identity
-    current_user_id = get_jwt_identity()
-    if current_user_id is None:
-        return jsonify({"error": "Unauthorized"}), 401
-
-    try:
-        current_user_id = int(current_user_id)
-    except (TypeError, ValueError):
-        return jsonify({"error": "Invalid token identity"}), 401
-
     try:
         # Verify Care Type exists and user owns it
         care_type = care_type_service.get_care_type_by_id(care_type_id)
@@ -296,7 +241,7 @@ def delete_care_type(care_type_id):
         if not care_type:
             return jsonify({"error": "Care Type not found"}), 404
 
-        if care_type.user_id != current_user_id:  # type: ignore
+        if care_type.user_id != user_id:  # type: ignore
             return jsonify(
                 {"error":
                  "Unauthorized: Care Type does not belong to you"}

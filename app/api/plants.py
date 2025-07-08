@@ -1,5 +1,6 @@
 from flask import Blueprint, request, jsonify
-from flask_jwt_extended import get_jwt_identity, jwt_required
+from flask_jwt_extended import jwt_required
+from app.decorators.auth import require_user_id
 from app.models.database import SessionLocal
 from app.services.plant_service import PlantService
 
@@ -8,25 +9,13 @@ plant_bp = Blueprint("plant", __name__)
 
 @plant_bp.route("", methods=["GET"])
 @jwt_required()
-def get_plants():
+@require_user_id
+def get_plants(user_id):
     """Gets all plants that belong to the user's JWT idenity."""
     db = SessionLocal()
     plant_service = PlantService(db)
 
     try:
-        # Validate user identity
-        user_id = get_jwt_identity()
-
-        if user_id is None:
-            return jsonify({"error":
-                            "Unauthorized: no identity in token"}), 401
-
-        try:
-            user_id = int(user_id)
-        except (TypeError, ValueError):
-            return jsonify({"error":
-                            "Unauthorized: invalid identity in token"}), 401
-
         # Get Plants
         plants = plant_service.get_user_plants(user_id)
 
@@ -58,25 +47,13 @@ def get_plants():
 
 @plant_bp.route("", methods=["POST"])
 @jwt_required()
-def create_plant():
+@require_user_id
+def create_plant(user_id):
     """Creates a new plant for a user via their JWT identity."""
     db = SessionLocal()
     plant_service = PlantService(db)
 
     try:
-        # Validate user identity
-        user_id = get_jwt_identity()
-
-        if user_id is None:
-            return jsonify({"error":
-                            "Unauthorized: no identity in token"}), 401
-
-        try:
-            user_id = int(user_id)
-        except (TypeError, ValueError):
-            return jsonify({"error":
-                            "Unauthorized: invalid identity in token"}), 401
-
         # Get request data
         data = request.get_json()
 
@@ -128,7 +105,8 @@ def create_plant():
 
 @plant_bp.route("/<int:plant_id>", methods=["GET"])
 @jwt_required()
-def get_plant(plant_id):
+@require_user_id
+def get_plant(user_id, plant_id):
     """Gets a Plant by its ID and returns its info.
 
     Args:
@@ -137,19 +115,6 @@ def get_plant(plant_id):
     db = SessionLocal()
     plant_service = PlantService(db)
 
-    # Ensure User can only see their plants information.
-    current_user_id = get_jwt_identity()
-
-    # Validate user identity
-    if current_user_id is None:
-        return jsonify({"error": "Unauthorized: no identity in token"}), 401
-
-    try:
-        current_user_id = int(current_user_id)
-    except (TypeError, ValueError):
-        return jsonify({"error":
-                        "Unauthorized: invalid identity in token"}), 401
-
     try:
         # Get Plant and validate it
         plant = plant_service.get_plant(plant_id)
@@ -157,9 +122,9 @@ def get_plant(plant_id):
         if not plant:
             return jsonify({"error": "Plant not found"}), 404
 
-        if plant.user_id != current_user_id:  # type: ignore
+        if plant.user_id != user_id:  # type: ignore
             return jsonify({"error":
-                            "Unauthorized: plant does not belong to you"}), 403
+                            "Unauthorized: Plant does not belong to you"}), 403
 
         # Respond
         return jsonify({
@@ -184,7 +149,8 @@ def get_plant(plant_id):
 
 @plant_bp.route("/<int:plant_id>", methods=["PATCH"])
 @jwt_required()
-def update_plant(plant_id):
+@require_user_id
+def update_plant(user_id, plant_id):
     """Updates a Plant's information.
 
     Args:
@@ -193,16 +159,6 @@ def update_plant(plant_id):
     db = SessionLocal()
     plant_service = PlantService(db)
 
-    # Validate user identity.
-    current_user_id = get_jwt_identity()
-    if current_user_id is None:
-        return jsonify({"error": "Unauthorized"}), 401
-
-    try:
-        current_user_id = int(current_user_id)
-    except (TypeError, ValueError):
-        return jsonify({"error": "Invalid token identity"}), 401
-
     try:
         # Validate Plant exists and user owns it
         plant = plant_service.get_plant(plant_id)
@@ -210,7 +166,7 @@ def update_plant(plant_id):
         if not plant:
             return jsonify({"error": "Plant not found"}), 404
 
-        if plant.user_id != current_user_id:  # type: ignore
+        if plant.user_id != user_id:  # type: ignore
             return jsonify({"error": "Unauthorized access to this plant"}), 403
 
         # Get request data and validate
@@ -252,7 +208,8 @@ def update_plant(plant_id):
 
 @plant_bp.route("/<int:plant_id>", methods=["DELETE"])
 @jwt_required()
-def delete_plant(plant_id):
+@require_user_id
+def delete_plant(user_id, plant_id):
     """Deletes a User's plant.
 
     Args:
@@ -261,16 +218,6 @@ def delete_plant(plant_id):
     db = SessionLocal()
     plant_service = PlantService(db)
 
-    # Validate user identity
-    current_user_id = get_jwt_identity()
-    if current_user_id is None:
-        return jsonify({"error": "Unauthorized"}), 401
-
-    try:
-        current_user_id = int(current_user_id)
-    except (TypeError, ValueError):
-        return jsonify({"error": "Invalid token identity"}), 401
-
     try:
         # Verify plant exists and user owns it
         plant = plant_service.get_plant(plant_id)
@@ -278,7 +225,7 @@ def delete_plant(plant_id):
         if not plant:
             return jsonify({"error": "Plant not found"}), 404
 
-        if plant.user_id != current_user_id:  # type: ignore
+        if plant.user_id != user_id:  # type: ignore
             return jsonify({"error": "Unauthorized access to this plant"}), 403
 
         # Delete plant and verify delete worked

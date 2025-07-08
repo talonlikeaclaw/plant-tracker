@@ -1,5 +1,6 @@
 from flask import Blueprint, request, jsonify
-from flask_jwt_extended import get_jwt_identity, jwt_required
+from flask_jwt_extended import jwt_required
+from app.decorators.auth import require_user_id
 from app.models.database import SessionLocal
 from app.services.plant_service import PlantService
 from app.services.plant_care_service import PlantCareService
@@ -9,26 +10,14 @@ plant_care_bp = Blueprint("plant_care", __name__)
 
 @plant_care_bp.route("/plant/<int:plant_id>", methods=["GET"])
 @jwt_required()
-def get_care_logs_by_plant(plant_id):
+@require_user_id
+def get_care_logs_by_plant(user_id, plant_id):
     """Gets all of the Care Logs for a Plant."""
     db = SessionLocal()
     plant_care_service = PlantCareService(db)
     plant_service = PlantService(db)
 
     try:
-        # Validate User identity
-        user_id = get_jwt_identity()
-
-        if user_id is None:
-            return jsonify({"error":
-                            "Unauthorized: no identity in token"}), 401
-
-        try:
-            user_id = int(user_id)
-        except (TypeError, ValueError):
-            return jsonify({"error":
-                            "Unauthorized: invalid identity in token"}), 401
-
         # Validate user owns Plant
         plant = plant_service.get_plant(plant_id)
         if plant.user_id != user_id:  # type: ignore
@@ -63,26 +52,14 @@ def get_care_logs_by_plant(plant_id):
 
 @plant_care_bp.route("", methods=["POST"])
 @jwt_required()
-def create_care_log():
+@require_user_id
+def create_care_log(user_id):
     """Creates a new Care Log."""
     db = SessionLocal()
     plant_care_service = PlantCareService(db)
     plant_service = PlantService(db)
 
     try:
-        # Validate user identity
-        user_id = get_jwt_identity()
-
-        if user_id is None:
-            return jsonify({"error":
-                            "Unauthorized: no identity in token"}), 401
-
-        try:
-            user_id = int(user_id)
-        except (TypeError, ValueError):
-            return jsonify({"error":
-                            "Unauthorized: invalid identity in token"}), 401
-
         # Get request data
         data = request.get_json()
 
@@ -136,7 +113,8 @@ def create_care_log():
 
 @plant_care_bp.route("/<int:care_log_id>", methods=["GET"])
 @jwt_required()
-def get_care_log(care_log_id):
+@require_user_id
+def get_care_log(user_id, care_log_id):
     """Gets a Care Log by its ID and returns its info.
 
     Args:
@@ -146,17 +124,6 @@ def get_care_log(care_log_id):
     plant_care_service = PlantCareService(db)
     plant_service = PlantService(db)
 
-    # Validate user identity
-    current_user_id = get_jwt_identity()
-
-    if current_user_id is None:
-        return jsonify({"error": "Unauthorized: no identity in token"}), 401
-
-    try:
-        current_user_id = int(current_user_id)
-    except (TypeError, ValueError):
-        return jsonify({"error":
-                        "Unauthorized: invalid identity in token"}), 401
     try:
         # Get Care Log and validate it exists
         care_log = plant_care_service.get_care_log_by_id(care_log_id)
@@ -168,7 +135,7 @@ def get_care_log(care_log_id):
         plant_id = care_log.plant_id  # type: ignore
         plant = plant_service.get_plant(plant_id)  # type: ignore
 
-        if plant.user_id != current_user_id:  # type: ignore
+        if plant.user_id != user_id:  # type: ignore
             return jsonify({"error":
                             "Unauthorized access to this care log."}), 403
 
@@ -192,7 +159,8 @@ def get_care_log(care_log_id):
 
 @plant_care_bp.route("/<int:care_log_id>", methods=["PATCH"])
 @jwt_required()
-def update_care_log(care_log_id):
+@require_user_id
+def update_care_log(care_log_id, *, user_id):
     """Updates a Care Log's information.
 
     Args:
@@ -202,15 +170,6 @@ def update_care_log(care_log_id):
     plant_care_service = PlantCareService(db)
     plant_service = PlantService(db)
 
-    # Validate user identity
-    current_user_id = get_jwt_identity()
-    if current_user_id is None:
-        return jsonify({"error": "Unauthorized"}), 401
-
-    try:
-        current_user_id = int(current_user_id)
-    except (TypeError, ValueError):
-        return jsonify({"error": "Invalid token identity"}), 401
     try:
         # Ensure Care Log exists
         care_log = plant_care_service.get_care_log_by_id(care_log_id)
@@ -233,7 +192,7 @@ def update_care_log(care_log_id):
         if not plant:
             return jsonify({"error": "Plant not found"}), 404
 
-        if plant.user_id != current_user_id:  # type: ignore
+        if plant.user_id != user_id:  # type: ignore
             return jsonify({"error":
                             "Unauthorized: Plant does not belong to you"}), 403
 
@@ -253,7 +212,7 @@ def update_care_log(care_log_id):
                 "care_type_id": updated_care_log.care_type_id,
                 "note": updated_care_log.note,
                 "care_date": updated_care_log.care_date.isoformat()
-                if update_care_log.care_date else None
+                if updated_care_log.care_date else None  # type: ignore
             }
         }), 200
 
@@ -267,7 +226,8 @@ def update_care_log(care_log_id):
 
 @plant_care_bp.route("/<int:care_log_id>", methods=["DELETE"])
 @jwt_required()
-def delete_care_log(care_log_id):
+@require_user_id
+def delete_care_log(user_id, care_log_id):
     """Deletes a Plant's Care Log by ID.
 
     Args:
@@ -276,16 +236,6 @@ def delete_care_log(care_log_id):
     db = SessionLocal()
     plant_care_service = PlantCareService(db)
     plant_service = PlantService(db)
-
-    # Validate user identity
-    current_user_id = get_jwt_identity()
-    if current_user_id is None:
-        return jsonify({"error": "Unauthorized"}), 401
-
-    try:
-        current_user_id = int(current_user_id)
-    except (TypeError, ValueError):
-        return jsonify({"error": "Invalid token identity"}), 401
 
     try:
         # Verify Care Log exists and user owns it
@@ -299,7 +249,7 @@ def delete_care_log(care_log_id):
         if not plant:
             return jsonify({"error": "Plant not found"}), 404
 
-        if plant.user_id != current_user_id:  # type: ignore
+        if plant.user_id != user_id:  # type: ignore
             return jsonify({"error":
                             "Unauthorized: plant does not belong to you"}), 403
 
