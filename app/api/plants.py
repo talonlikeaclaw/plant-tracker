@@ -11,7 +11,7 @@ plant_bp = Blueprint("plant", __name__)
 @jwt_required()
 @require_user_id
 def get_plants(user_id):
-    """Gets all plants that belong to the user's JWT idenity."""
+    """Gets all plants that belong to the user's JWT identity."""
     db = SessionLocal()
     plant_service = PlantService(db)
 
