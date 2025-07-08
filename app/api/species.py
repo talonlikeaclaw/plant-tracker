@@ -162,7 +162,7 @@ def update_species(user_id, species_id):
         updated_species = species_service.update_species(species_id, updates)
 
         if not updated_species:
-            return jsonify({"error": "Updated species was not found"}), 500
+            return jsonify({"error": "Updated species was not found"}), 404
 
         # Respond
         return jsonify({
