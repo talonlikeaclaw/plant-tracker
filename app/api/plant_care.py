@@ -197,7 +197,7 @@ def update_care_log(user_id, care_log_id):
             return jsonify({"error":
                             "Unauthorized: Plant does not belong to you"}), 403
 
-        # Update species and validate success
+        # Update Care Log and validate success
         updated_care_log = plant_care_service.update_care_log(
             care_log_id, updates)
 

@@ -102,7 +102,7 @@ class CareTypeService:
             updates (dict): Fields to update.
 
         Returns:
-            CareType or None: Updated Care Log or None if not found.
+            CareType or None: Updated Care Type or None if not found.
         """
         care_type = self.get_care_type_by_id(care_type_id)
         if not care_type:
