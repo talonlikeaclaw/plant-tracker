@@ -121,7 +121,7 @@ def get_a_species(user_id, species_id):
                 "sunlight": species.sunlight,
                 "water_requirements": species.water_requirements
             }
-        }), 201
+        }), 200
 
     except Exception as e:
         return jsonify({"error": str(e)}), 400
