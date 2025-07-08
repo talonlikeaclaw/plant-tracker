@@ -20,6 +20,10 @@ def get_care_logs_by_plant(user_id, plant_id):
     try:
         # Validate user owns Plant
         plant = plant_service.get_plant(plant_id)
+
+        if not plant:
+            return jsonify({"error": "Plant not found"}), 404
+
         if plant.user_id != user_id:  # type: ignore
             return jsonify({"error":
                             "Unauthorized access to this plant."}), 403
@@ -76,6 +80,10 @@ def create_care_log(user_id):
 
         # Ensure user owns Plant
         plant = plant_service.get_plant(plant_id)
+
+        if not plant:
+            return jsonify({"error": "Plant not found"}), 404
+
         if plant.user_id != user_id:  # type: ignore
             return jsonify({"error":
                             "Unauthorized access to this plant."}), 403
@@ -134,6 +142,9 @@ def get_care_log(user_id, care_log_id):
         # Validate User is accessing Care Log for a Plant they own
         plant_id = care_log.plant_id  # type: ignore
         plant = plant_service.get_plant(plant_id)  # type: ignore
+
+        if not plant:
+            return jsonify({"error": "Plant not found"}), 404
 
         if plant.user_id != user_id:  # type: ignore
             return jsonify({"error":
