@@ -128,7 +128,7 @@ def update_password(user_id):
         if new_password != confirm_password:
             return jsonify(
                 {"error":
-                 "The new_password and confirm_passwond fields must match."}
+                 "The new_password and confirm_password fields must match."}
             ), 400
 
         user = auth_service.authenticate_user(email, old_password)
