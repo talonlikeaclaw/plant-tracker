@@ -186,7 +186,7 @@ def update_care_type(user_id, care_type_id):
         if care_type.user_id != user_id:  # type: ignore
             return jsonify(
                 {"error": "Unauthorized: Care Type does not belong to you."}
-            ), 400
+            ), 403
 
         # Get and validate request data
         data = request.get_json()
