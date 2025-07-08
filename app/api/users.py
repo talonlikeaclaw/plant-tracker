@@ -135,6 +135,11 @@ def update_password(user_id):
         if not user:
             return jsonify({"error": "Invalid credentials"}), 401
 
+        if user.id != user_id:
+            return jsonify({
+                "error": "Unauthorized: You may only update you own password"
+            }), 403
+
         hashed_password = auth_service.hash_password(new_password)
         user_service.update_user(user_id, {"password_hash": hashed_password})
 
