@@ -148,7 +148,7 @@ def get_care_log(user_id, care_log_id):
                 "note": care_log.note,
                 "care_date": care_log.care_date.isoformat(),
             }
-        }), 201
+        }), 200
 
     except Exception as e:
         return jsonify({"error": str(e)}), 400
