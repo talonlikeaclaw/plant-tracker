@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify
-from flask_jwt_extended import get_jwt_identity, jwt_required
+from flask_jwt_extended import jwt_required
 from app.decorators.auth import require_user_id
 from app.models.database import SessionLocal
 from app.services.care_type_service import CareTypeService
