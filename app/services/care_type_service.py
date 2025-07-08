@@ -32,7 +32,7 @@ class CareTypeService:
 
         Returns:
             CareType:
-                - The CareType object with a populated ID and commited state.
+                - The CareType object with a populated ID and committed state.
 
         Raises:
             ValueError: If required field is missing.
