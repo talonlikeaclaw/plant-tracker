@@ -12,6 +12,5 @@ class Species(Base):
     scientific_name = Column(String)
     sunlight = Column(String)
     water_requirements = Column(String)
-    perenual_id = Column(Integer)
 
     plants = relationship("Plant", back_populates="species")
