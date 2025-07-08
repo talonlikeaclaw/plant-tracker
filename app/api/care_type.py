@@ -167,15 +167,6 @@ def update_care_type(user_id, care_type_id):
     db = SessionLocal()
     care_type_service = CareTypeService(db)
 
-    # Validate user identity
-    current_user_id = get_jwt_identity()
-    if current_user_id is None:
-        return jsonify({"error": "Unauthorized"}), 401
-
-    try:
-        current_user_id = int(current_user_id)
-    except (TypeError, ValueError):
-        return jsonify({"error": "Invalid token identity"}), 401
     try:
         # Ensure Care Type exists
         care_type = care_type_service.get_care_type_by_id(care_type_id)
