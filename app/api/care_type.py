@@ -7,7 +7,7 @@ from app.services.care_type_service import CareTypeService
 care_type_bp = Blueprint("care_type", __name__)
 
 
-@care_type_bp.route("/default/", methods=["GET"])
+@care_type_bp.route("/default", methods=["GET"])
 @jwt_required()
 @require_user_id
 def get_default_care_types(user_id):
@@ -41,7 +41,7 @@ def get_default_care_types(user_id):
         db.close()
 
 
-@care_type_bp.route("/user/", methods=["GET"])
+@care_type_bp.route("/user", methods=["GET"])
 @jwt_required()
 @require_user_id
 def get_user_care_types(user_id):
