@@ -17,3 +17,7 @@ class Config:
     SQLALCHEMY_DATABASE_URI = (
         f"postgresql+psycopg2://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
     )
+
+    JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY")
+    if JWT_SECRET_KEY is None:
+        raise ValueError("JWT_SECRET_KEY environment variable is not set. This is required for secure JWT operations.")
