@@ -160,10 +160,11 @@ def get_care_log(user_id, care_log_id):
 @plant_care_bp.route("/<int:care_log_id>", methods=["PATCH"])
 @jwt_required()
 @require_user_id
-def update_care_log(care_log_id, *, user_id):
+def update_care_log(user_id, care_log_id):
     """Updates a Care Log's information.
 
     Args:
+        user_id (int): The ID of the user making the request.
         care_log_id (int): The ID of the Care Log to update.
     """
     db = SessionLocal()
