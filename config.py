@@ -19,3 +19,5 @@ class Config:
     )
 
     JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY")
+    if JWT_SECRET_KEY is None:
+        raise ValueError("JWT_SECRET_KEY environment variable is not set. This is required for secure JWT operations.")
