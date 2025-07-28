@@ -4,9 +4,7 @@ function App() {
   return (
     <div className="App">
       <header className="App-header">
-        <p>
-          Edit <code>src/App.tsx</code> and save to reload.
-        </p>
+        <h1 className="text-3xl text-green-600 font-bold">Tailwind Is Working!</h1>
         <a
           className="App-link"
           href="https://reactjs.org"
