@@ -1,20 +1,13 @@
-import React from 'react';
+import { Routes, Route } from "react-router-dom";
+import Login from "./pages/Login";
+import Register from "./pages/Register";
 
 function App() {
   return (
-    <div className="App">
-      <header className="App-header">
-        <h1 className="text-3xl text-green-600 font-bold">Tailwind Is Working!</h1>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
+    <Routes>
+      <Route path="/login" element={<Login />} />
+      <Route path="/register" element={<Register />} />
+    </Routes>
   );
 }
 
