@@ -6,4 +6,4 @@ app = create_app()
 
 if __name__ == "__main__":
     Base.metadata.create_all(bind=engine)
-    app.run(debug=True, port=5000)
+    app.run(host="0.0.0.0", port=5000, debug=True)
