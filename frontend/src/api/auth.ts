@@ -1,14 +1,5 @@
 import api from "./axios";
-
-interface AuthResponse {
-  access_token: string;
-  message?: string;
-  user: {
-    id: number;
-    username: string;
-    email: string;
-  };
-}
+import { AuthResponse } from "../types";
 
 export async function loginUser(data: {
   email: string;
