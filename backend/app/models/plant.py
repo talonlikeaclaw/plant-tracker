@@ -5,6 +5,7 @@ from sqlalchemy.orm import relationship
 
 class Plant(Base):
     """Represents a User's owned Plant"""
+
     __tablename__ = "plants"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -17,7 +18,5 @@ class Plant(Base):
 
     user = relationship("User", back_populates="plants")
     species = relationship("Species", back_populates="plants")
-    care_logs = relationship(
-        "PlantCare",
-        back_populates="plant",
-        cascade="all, delete")
+    care_logs = relationship("PlantCare", back_populates="plant", cascade="all, delete")
+    care_plans = relationship("CarePlan", back_populates="plant", cascade="all, delete")

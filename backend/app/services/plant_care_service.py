@@ -1,8 +1,8 @@
-from app.models import PlantCare
+from app.models import PlantCare, CarePlan
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from typing import Optional, List
-from datetime import date
+from datetime import date, timedelta
 
 
 class PlantCareService:
@@ -59,6 +59,55 @@ class PlantCareService:
             raise
         return care_log
 
+    def create_care_plan(self, data: dict) -> CarePlan:
+        """Creates a new CarePlan record in the database.
+
+        Args:
+            data (dict): A dictionary containing the fields for the CarePlan:
+                - 'user_id' (int, required)
+                - 'plant_id' (int, required)
+                - 'care_type_id' (int, required)
+                - 'start_date' (date, optional (defaults to today))
+                - 'frequency_days' (int, optional (defaults to 7))
+                - 'note' (str, optional)
+                - 'active' (bool, optional (defaults to true))
+
+        Returns:
+            CarePlan:
+                - The CarePlan object with a populated ID and commited state.
+
+        Raises:
+            ValueError: If required field is missing.
+            IntegrityError: If database constraints are violated.
+        """
+        if not data.get("user_id"):
+            raise ValueError("user_id is required")
+
+        if not data.get("plant_id"):
+            raise ValueError("plant_id is required")
+
+        if not data.get("care_type_id"):
+            raise ValueError("care_type_id is required")
+
+        if not data.get("start_date"):
+            data["start_date"] = date.today()
+
+        if not data.get("frequency_days"):
+            data["frequency_days"] = 7
+
+        if not data.get("active"):
+            data["active"] = True
+
+        care_plan = CarePlan(**data)
+        self.db.add(care_plan)
+        try:
+            self.db.commit()
+            self.db.refresh(care_plan)
+        except IntegrityError:
+            self.db.rollback()
+            raise
+        return care_plan
+
     def get_care_log_by_id(self, care_id: int) -> Optional[PlantCare]:
         """Fetches a single PlantCare by its ID.
 
@@ -69,6 +118,17 @@ class PlantCareService:
             PlantCare or None: Found PlantCare or None if not found.
         """
         return self.db.query(PlantCare).filter_by(id=care_id).first()
+
+    def get_care_plan_by_id(self, plan_id: int) -> Optional[CarePlan]:
+        """Fetches a single CarePlan by its ID.
+
+        Args:
+            plan_id (int): The primary key of the CarePlan to retrieve.
+
+        Returns:
+            CarePlan or None: Found CarePlan or None if not found.
+        """
+        return self.db.query(CarePlan).filter_by(id=plan_id).first()
 
     def get_plant_care_logs(self, plant_id: int) -> List[PlantCare]:
         """Fetches all PlantCare logs for a specified Plant.
@@ -87,6 +147,71 @@ class PlantCareService:
             .order_by(PlantCare.care_date.desc())
             .all()
         )
+
+    def get_active_care_plans_for_user(self, user_id: int) -> List[CarePlan]:
+        """Fetches all active CarePlans for a specified User.
+
+        Args:
+            user_id (int):
+                - The primary key of the User to get the Care Plans for.
+
+        Returns:
+            List[CarePlan] or []:
+                - All Care Plans for the User, or an empty list.
+        """
+        return self.db.query(CarePlan).filter_by(user_id=user_id, active=True).all()
+
+    def get_all_care_plans_for_user(self, user_id: int) -> List[CarePlan]:
+        """Fetches all CarePlans for a specified User.
+
+        Args:
+            user_id (int):
+                - The primary key of the User to get the Care Plans for.
+
+        Returns:
+            List[CarePlan] or []:
+                - All Care Plans for the User, or an empty list.
+        """
+        return self.db.query(CarePlan).filter_by(user_id=user_id).all()
+
+    def get_upcoming_care_logs(self, user_id: int) -> List[dict]:
+        """Fetches upcoming CarePlans and converts into upcoming logs.
+
+        Args:
+            user_id (int):
+                - The primary key of the User to get the upcoming logs for.
+
+        Returns:
+            List[dict] or []:
+                - All upcoming care logs/plans in a nicely formatted dictionary.
+
+        """
+        today = date.today()
+        upcoming_logs = []
+
+        care_plans = self.get_active_care_plans_for_user(user_id)
+        for plan in care_plans:
+            delta = (today - plan.start_date).days
+            if delta >= 0:
+                cycles = delta // plan.frequency_days
+                next_due = plan.start_date + timedelta(
+                    days=(cycles + 1) * plan.frequency_days
+                )
+            else:
+                next_due = plan.start_date
+
+            upcoming_logs.append(
+                {
+                    "plant_id": plan.plant_id,
+                    "plant_nickname": plan.plant.nickname,
+                    "care_type": plan.care_type.name,
+                    "note": plan.note,
+                    "due_date": next_due,
+                    "days_until_due": (next_due - today).days,
+                }
+            )
+
+        return sorted(upcoming_logs, key=lambda log: log["due_date"])
 
     def update_care_log(self, care_id: int, updates: dict) -> Optional[PlantCare]:
         """Updates fields of an existing care log.
@@ -114,6 +239,70 @@ class PlantCareService:
             raise
         return care_log
 
+    def update_care_plan(self, plan_id: int, updates: dict) -> Optional[CarePlan]:
+        """Updates fields of an existing Care Plan.
+
+        Args:
+            plan_id (int): ID of the Care Plan to update.
+            updates (dict): Fields to update.
+
+        Returns:
+            CarePlan or None: Updated Care Plan or None if not found.
+        """
+        care_plan = self.get_care_plan_by_id(plan_id)
+        if not care_plan:
+            return None
+
+        for key, value in updates.items():
+            if hasattr(care_plan, key):
+                setattr(care_plan, key, value)
+
+        try:
+            self.db.commit()
+            self.db.refresh(care_plan)
+        except IntegrityError:
+            self.db.rollback()
+            raise
+        return care_plan
+
+    def log_from_care_plan(self, plan_id: int, note: Optional[str] = None) -> PlantCare:
+        """Creates a PlantCare log from a CarePlan via id.
+
+        Args:
+            plan_id (int): ID of the CarePlan to update.
+            note (str, optional): Addition note to include in the log.
+
+        Returns:
+            PlantCare or None: Created PlantCare log or None if not found.
+
+        Raises:
+            ValueError: If the CarePlan is not found.
+            IntegrityError: If DB commit fails.
+        """
+        care_plan = self.get_care_plan_by_id(plan_id)
+        if not care_plan:
+            return None
+
+        final_note = note or ""
+
+        care_log_data = {
+            "plant_id": care_plan.plant_id,
+            "care_type_id": care_plan.care_type_id,
+            "note": final_note,
+            "care_date": date.today(),
+        }
+
+        care_log = PlantCare(**care_log_data)
+        self.db.add(care_log)
+        try:
+            self.db.commit()
+            self.db.refresh(care_log)
+        except IntegrityError:
+            self.db.rollback()
+            raise
+
+        return care_log
+
     def delete_care_log(self, care_id: int) -> bool:
         """Deletes a care log from the database.
 
@@ -128,5 +317,22 @@ class PlantCareService:
             return False
 
         self.db.delete(care_log)
+        self.db.commit()
+        return True
+
+    def delete_care_plan(self, plan_id: int) -> bool:
+        """Deletes a Care Plan from the database.
+
+        Args:
+            plan_id (int): ID of the care log to delete.
+
+        Returns:
+            bool: True if deleted, False if not found.
+        """
+        care_plan = self.get_care_plan_by_id(plan_id)
+        if not care_plan:
+            return False
+
+        self.db.delete(care_plan)
         self.db.commit()
         return True

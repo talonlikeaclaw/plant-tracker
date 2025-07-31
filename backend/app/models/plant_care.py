@@ -5,6 +5,7 @@ from app.models.database import Base
 
 class PlantCare(Base):
     """Represents a log/action of PlantCare performed by a User"""
+
     __tablename__ = "plant_care"
 
     id = Column(Integer, primary_key=True, index=True)
