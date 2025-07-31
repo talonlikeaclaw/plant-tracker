@@ -2,7 +2,7 @@ from app.models import PlantCare
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from typing import Optional, List
-from datetime import date
+from datetime import date, timedelta
 
 
 class PlantCareService:
@@ -162,6 +162,45 @@ class PlantCareService:
                 - All Care Plans for the User, or an empty list.
         """
         return self.db.query(CarePlan).filter_by(user_id=user_id).all()
+
+    def get_upcoming_care_logs(self, user_id: int) -> List[dict]:
+        """Fetches upcoming CarePlans and converts into upcoming logs.
+
+        Args:
+            user_id (int):
+                - The primary key of the User to get the upcoming logs for.
+
+        Returns:
+            List[dict] or []:
+                - All upcoming care logs/plans in a nicely formatted dictionary.
+
+        """
+        today = date.today()
+        upcoming_logs = []
+
+        care_plans = self.get_active_care_plans_for_user(user_id)
+        for plan in care_plans:
+            delta = (today - plan.start_date).days
+            if delta >= 0:
+                cycles = delta // plan.frequency_days
+                next_due = plan.start_date + timedelta(
+                    days=(cycles + 1) * plan.frequency_days
+                )
+            else:
+                next_due = plan.start_date
+
+            upcoming_logs.append(
+                {
+                    "plant_id": plan.plant_id,
+                    "plant_nickname": plan.plant.nickname,
+                    "care_type": plan.care_type.name,
+                    "note": plan.note,
+                    "due_date": next_due,
+                    "days_until_due": (next_due - today).days,
+                }
+            )
+
+    return sorted(upcoming_logs, key=lambda log: log["due_date"])
 
     def update_care_log(self, care_id: int, updates: dict) -> Optional[PlantCare]:
         """Updates fields of an existing care log.
