@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 
 class User(Base, UserMixin):
     """Represents a User in the system"""
+
     __tablename__ = "users"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -15,11 +16,6 @@ class User(Base, UserMixin):
     password_hash = Column(String, nullable=False)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
-    plants = relationship(
-        "Plant",
-        back_populates="user",
-        cascade="all, delete")
-    care_types = relationship(
-        "CareType",
-        back_populates="user",
-        cascade="all, delete")
+    plants = relationship("Plant", back_populates="user", cascade="all, delete")
+    care_types = relationship("CareType", back_populates="user", cascade="all, delete")
+    care_plans = relationship("CarePlan", back_populates="user", cascade="all, delete")
