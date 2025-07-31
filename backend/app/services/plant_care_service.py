@@ -137,6 +137,32 @@ class PlantCareService:
             .all()
         )
 
+    def get_active_care_plans_for_user(self, user_id: int) -> List[CarePlan]:
+        """Fetches all active CarePlans for a specified User.
+
+        Args:
+            user_id (int):
+                - The primary key of the User to get the Care Plans for.
+
+        Returns:
+            List[CarePlan] or []:
+                - All Care Plans for the User, or an empty list.
+        """
+        return self.db.query(CarePlan).filter_by(user_id=user_id, active=True).all()
+
+    def get_all_care_plans_for_user(self, user_id: int) -> List[CarePlan]:
+        """Fetches all CarePlans for a specified User.
+
+        Args:
+            user_id (int):
+                - The primary key of the User to get the Care Plans for.
+
+        Returns:
+            List[CarePlan] or []:
+                - All Care Plans for the User, or an empty list.
+        """
+        return self.db.query(CarePlan).filter_by(user_id=user_id).all()
+
     def update_care_log(self, care_id: int, updates: dict) -> Optional[PlantCare]:
         """Updates fields of an existing care log.
 
