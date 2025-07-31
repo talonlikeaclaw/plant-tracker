@@ -59,6 +59,55 @@ class PlantCareService:
             raise
         return care_log
 
+    def create_care_plan(self, data: dict) -> CarePlan:
+        """Creates a new CarePlan record in the database.
+
+        Args:
+            data (dict): A dictionary containing the fields for the CarePlan:
+                - 'user_id' (int, required)
+                - 'plant_id' (int, required)
+                - 'care_type_id' (int, required)
+                - 'start_date' (date, optional (defaults to today))
+                - 'frequency_days' (int, optional (defaults to 7))
+                - 'note' (str, optional)
+                - 'active' (bool, optional (defaults to true))
+
+        Returns:
+            CarePlan:
+                - The CarePlan object with a populated ID and commited state.
+
+        Raises:
+            ValueError: If required field is missing.
+            IntegrityError: If database constraints are violated.
+        """
+        if not data.get("user_id"):
+            raise ValueError("user_id is required")
+
+        if not data.get("plant_id"):
+            raise ValueError("plant_id is required")
+
+        if not data.get("care_type_id"):
+            raise ValueError("care_type_id is required")
+
+        if not data.get("start_date"):
+            data["start_date"] = date.today()
+
+        if not data.get("frequency_days"):
+            data["frequency_days"] = 7
+
+        if not data.get("active"):
+            data["active"] = True
+
+        care_plan = CarePlan(**data)
+        self.db.add(care_plan)
+        try:
+            self.db.commit()
+            self.db.refresh(care_plan)
+        except IntegrityError:
+            self.db.rollback()
+            raise
+        return care_plan
+
     def get_care_log_by_id(self, care_id: int) -> Optional[PlantCare]:
         """Fetches a single PlantCare by its ID.
 
