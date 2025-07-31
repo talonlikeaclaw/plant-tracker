@@ -239,6 +239,32 @@ class PlantCareService:
             raise
         return care_log
 
+    def update_care_plan(self, plan_id: int, updates: dict) -> Optional[CarePlan]:
+        """Updates fields of an existing Care Plan.
+
+        Args:
+            plan_id (int): ID of the Care Plan to update.
+            updates (dict): Fields to update.
+
+        Returns:
+            CarePlan or None: Updated Care Plan or None if not found.
+        """
+        care_plan = self.get_care_plan_by_id(plan_id)
+        if not care_plan:
+            return None
+
+        for key, value in updates.items():
+            if hasattr(care_plan, key):
+                setattr(care_plan, key, value)
+
+        try:
+            self.db.commit()
+            self.db.refresh(care_plan)
+        except IntegrityError:
+            self.db.rollback()
+            raise
+        return care_plan
+
     def log_from_care_plan(self, plan_id: int, note: Optional[str] = None) -> PlantCare:
         """Creates a PlantCare log from a CarePlan via id.
 
