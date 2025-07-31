@@ -279,7 +279,7 @@ class PlantCareService:
             ValueError: If the CarePlan is not found.
             IntegrityError: If DB commit fails.
         """
-        care_plan = self.db.query(CarePlan).filter_by(id=plan_id).first()
+        care_plan = self.get_care_plan_by_id(plan_id)
         if not care_plan:
             return None
 
@@ -317,5 +317,22 @@ class PlantCareService:
             return False
 
         self.db.delete(care_log)
+        self.db.commit()
+        return True
+
+    def delete_care_plan(self, plan_id: int) -> bool:
+        """Deletes a Care Plan from the database.
+
+        Args:
+            plan_id (int): ID of the care log to delete.
+
+        Returns:
+            bool: True if deleted, False if not found.
+        """
+        care_plan = self.get_care_plan_by_id(plan_id)
+        if not care_plan:
+            return False
+
+        self.db.delete(care_plan)
         self.db.commit()
         return True
