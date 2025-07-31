@@ -26,8 +26,7 @@ def get_care_logs_by_plant(user_id, plant_id):
             return jsonify({"error": "Plant not found"}), 404
 
         if plant.user_id != user_id:  # type: ignore
-            return jsonify({"error":
-                            "Unauthorized access to this plant."}), 403
+            return jsonify({"error": "Unauthorized access to this plant."}), 403
 
         # Get all Care Logs for plant
         care_logs = plant_care_service.get_plant_care_logs(plant_id)
@@ -75,9 +74,12 @@ def create_care_log(user_id):
 
         # Validate required fields
         if not plant_id or not care_type_id:
-            return jsonify(
-                {"error": "The plant_id and care_type_id fields are required."}
-            ), 400
+            return (
+                jsonify(
+                    {"error": "The plant_id and care_type_id fields are required."}
+                ),
+                400,
+            )
 
         # Ensure user owns Plant
         plant = plant_service.get_plant(plant_id)
@@ -86,31 +88,47 @@ def create_care_log(user_id):
             return jsonify({"error": "Plant not found"}), 404
 
         if plant.user_id != user_id:  # type: ignore
-            return jsonify({"error":
-                            "Unauthorized access to this plant."}), 403
+            return jsonify({"error": "Unauthorized access to this plant."}), 403
 
         # Prepare Care Log data
         care_log_data = {
             "plant_id": plant_id,
             "care_type_id": care_type_id,
             "note": note,
-            "care_date": care_date
+            "care_date": care_date,
         }
 
         new_care_log = plant_care_service.create_care_log(care_log_data)
 
         # Respond
-        return jsonify({
-            "message": "Care Log created successfully!",
-            "care_log": {
-                "id": new_care_log.id,
-                "plant_id": new_care_log.plant_id,
-                "care_type_id": new_care_log.care_type_id,
-                "note": new_care_log.note,
-                "care_date": new_care_log.care_date.isoformat()
-                if new_care_log.care_date else None,  # type: ignore
-            }
-        }), 201
+        return (
+            jsonify(
+                {
+                    "message": "Care Log created successfully!",
+                    "care_log": {
+                        "id": new_care_log.id,
+                        "plant_id": new_care_log.plant_id,
+                        "care_type_id": new_care_log.care_type_id,
+                        "note": new_care_log.note,
+                        "care_date": (
+                            new_care_log.care_date.isoformat()
+                            if new_care_log.care_date
+                            else None
+                        ),  # type: ignore
+                    },
+                }
+            ),
+            201,
+        )
+
+    except Exception as e:
+        db.rollback()
+        return jsonify({"error": str(e)}), 400
+
+    finally:
+        db.close()
+
+
 @plant_care_bp.route("/care-plans", methods=["POST"])
 @jwt_required()
 @require_user_id
@@ -227,19 +245,23 @@ def get_care_log(user_id, care_log_id):
             return jsonify({"error": "Plant not found"}), 404
 
         if plant.user_id != user_id:  # type: ignore
-            return jsonify({"error":
-                            "Unauthorized access to this care log."}), 403
+            return jsonify({"error": "Unauthorized access to this care log."}), 403
 
         # Respond
-        return jsonify({
-            "care_log": {
-                "id": care_log.id,
-                "plant_id": care_log.plant_id,
-                "care_type_id": care_log.care_type_id,
-                "note": care_log.note,
-                "care_date": care_log.care_date.isoformat(),
-            }
-        }), 200
+        return (
+            jsonify(
+                {
+                    "care_log": {
+                        "id": care_log.id,
+                        "plant_id": care_log.plant_id,
+                        "care_type_id": care_log.care_type_id,
+                        "note": care_log.note,
+                        "care_date": care_log.care_date.isoformat(),
+                    }
+                }
+            ),
+            200,
+        )
 
     except Exception as e:
         return jsonify({"error": str(e)}), 400
@@ -271,42 +293,46 @@ def update_care_log(user_id, care_log_id):
 
         # Get and validate request data
         data = request.get_json()
-        allowed_fields = ["plant_id", "care_type_id",
-                          "note", "care_date"]
+        allowed_fields = ["plant_id", "care_type_id", "note", "care_date"]
         updates = {k: v for k, v in data.items() if k in allowed_fields}
 
         if not updates:
             return jsonify({"error": "No valid fields to update"}), 400
 
-        plant = plant_service.get_plant(
-            updates.get("plant_id"))  # type: ignore
+        plant = plant_service.get_plant(updates.get("plant_id"))  # type: ignore
 
         if not plant:
             return jsonify({"error": "Plant not found"}), 404
 
         if plant.user_id != user_id:  # type: ignore
-            return jsonify({"error":
-                            "Unauthorized: Plant does not belong to you"}), 403
+            return jsonify({"error": "Unauthorized: Plant does not belong to you"}), 403
 
         # Update Care Log and validate success
-        updated_care_log = plant_care_service.update_care_log(
-            care_log_id, updates)
+        updated_care_log = plant_care_service.update_care_log(care_log_id, updates)
 
         if not updated_care_log:
             return jsonify({"error": "Updated Care Log was not found"}), 500
 
         # Respond
-        return jsonify({
-            "message": "Care Log updated successfully!",
-            "care_log": {
-                "id": updated_care_log.id,
-                "plant_id": updated_care_log.plant_id,
-                "care_type_id": updated_care_log.care_type_id,
-                "note": updated_care_log.note,
-                "care_date": updated_care_log.care_date.isoformat()
-                if updated_care_log.care_date else None  # type: ignore
-            }
-        }), 200
+        return (
+            jsonify(
+                {
+                    "message": "Care Log updated successfully!",
+                    "care_log": {
+                        "id": updated_care_log.id,
+                        "plant_id": updated_care_log.plant_id,
+                        "care_type_id": updated_care_log.care_type_id,
+                        "note": updated_care_log.note,
+                        "care_date": (
+                            updated_care_log.care_date.isoformat()
+                            if updated_care_log.care_date
+                            else None
+                        ),  # type: ignore
+                    },
+                }
+            ),
+            200,
+        )
 
     except Exception as e:
         db.rollback()
@@ -342,8 +368,7 @@ def delete_care_log(user_id, care_log_id):
             return jsonify({"error": "Plant not found"}), 404
 
         if plant.user_id != user_id:  # type: ignore
-            return jsonify({"error":
-                            "Unauthorized: plant does not belong to you"}), 403
+            return jsonify({"error": "Unauthorized: plant does not belong to you"}), 403
 
         # Delete Care Log and verify delete worked
         deleted = plant_care_service.delete_care_log(care_log_id)
