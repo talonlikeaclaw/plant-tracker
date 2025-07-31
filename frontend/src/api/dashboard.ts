@@ -1,8 +1,8 @@
 import api from "./axios";
-import { Plant, CareLog, CareType } from "../types";
+import type { Plant, CareLog, CareType } from "@/types";
 
 export async function getUserPlants(): Promise<Plant[]> {
-  const res = await api.get<Plant[]>("/api/plants");
+  const res = await api.get<Plant[]>("/plants");
   return res.data;
 }
 
@@ -10,7 +10,7 @@ export async function getUserCareLogs(): Promise<CareLog[]> {
   const plants = await getUserPlants();
 
   const careLogPromises = plants.map((plant) =>
-    api.get<CareLog[]>(`/api/plant-care/plant/${plant.id}`),
+    api.get<CareLog[]>(`/plant-care/plant/${plant.id}`),
   );
 
   const careLogsPerPlant = await Promise.all(careLogPromises);
@@ -21,8 +21,8 @@ export async function getUserCareLogs(): Promise<CareLog[]> {
 
 export async function getCareTypes(): Promise<CareType[]> {
   const [defaultRes, userRes] = await Promise.all([
-    api.get<CareType[]>("/api/care-types/default"),
-    api.get<CareType[]>("/api/care-types/user"),
+    api.get<CareType[]>("/care-types/default"),
+    api.get<CareType[]>("/care-types/user"),
   ]);
 
   return [...defaultRes.data, ...userRes.data];
