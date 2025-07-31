@@ -4,6 +4,7 @@ from app.decorators.auth import require_user_id
 from app.models.database import SessionLocal
 from app.services.plant_service import PlantService
 from app.services.plant_care_service import PlantCareService
+from datetime import datetime
 
 plant_care_bp = Blueprint("plant_care", __name__)
 
@@ -110,6 +111,85 @@ def create_care_log(user_id):
                 if new_care_log.care_date else None,  # type: ignore
             }
         }), 201
+@plant_care_bp.route("/care-plans", methods=["POST"])
+@jwt_required()
+@require_user_id
+def create_care_plan(user_id):
+    """Creates a new Care Plan"""
+    db = SessionLocal()
+    plant_care_service = PlantCareService(db)
+    plant_service = PlantService(db)
+
+    try:
+        # Get request data
+        data = request.get_json()
+
+        plant_id = data.get("plant_id")
+        care_type_id = data.get("care_type_id")
+        note = data.get("note")
+        start_date = data.get("start_date")
+        frequency_days = data.get("frequency_days")
+        active = data.get("active")
+
+        # Validate required fields
+        if not plant_id or not care_type_id:
+            return (
+                jsonify(
+                    {"error": "The plant_id and care_type_id fields are required."}
+                ),
+                400,
+            )
+
+        plant = plant_service.get_plant(plant_id)
+
+        if not plant:
+            return jsonify({"error": "Plant not found"}), 404
+
+        if plant.user_id != user_id:
+            return jsonify({"error": "Unauthorized access to this plant."}), 403
+
+        if start_date:
+            try:
+                start_date = datetime.fromisoformat(start_date).date()
+            except ValueError:
+                return (
+                    jsonify({"error": "Invalid start_date format. Use YYYY-MM-DD."}),
+                    400,
+                )
+
+        if active is None:
+            active = True
+
+        # Prepare data
+        care_plan_data = {
+            "plant_id": plant_id,
+            "care_type_id": care_type_id,
+            "note": note,
+            "start_date": start_date,
+            "frequency_days": frequency_days,
+            "active": active,
+        }
+
+        # Create Care Plan and return json
+        new_care_plan = plant_care_service.create_care_plan(care_plan_data)
+
+        return (
+            jsonify(
+                {
+                    "message": "Care Plan created successfully!",
+                    "care_plan": {
+                        "id": new_care_plan.id,
+                        "plant_id": new_care_plan.plant_id,
+                        "care_type_id": new_care_plan.care_type_id,
+                        "note": new_care_plan.note,
+                        "start_date": new_care_plan.start_date.isoformat(),
+                        "frequency_days": new_care_plan.frequency_days,
+                        "active": new_care_plan.active,
+                    },
+                }
+            ),
+            201,
+        )
 
     except Exception as e:
         db.rollback()
