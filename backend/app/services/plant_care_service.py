@@ -119,6 +119,17 @@ class PlantCareService:
         """
         return self.db.query(PlantCare).filter_by(id=care_id).first()
 
+    def get_care_plan_by_id(self, plan_id: int) -> Optional[CarePlan]:
+        """Fetches a single CarePlan by its ID.
+
+        Args:
+            plan_id (int): The primary key of the CarePlan to retrieve.
+
+        Returns:
+            CarePlan or None: Found CarePlan or None if not found.
+        """
+        return self.db.query(CarePlan).filter_by(id=plan_id).first()
+
     def get_plant_care_logs(self, plant_id: int) -> List[PlantCare]:
         """Fetches all PlantCare logs for a specified Plant.
 
