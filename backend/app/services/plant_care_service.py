@@ -200,7 +200,7 @@ class PlantCareService:
                 }
             )
 
-    return sorted(upcoming_logs, key=lambda log: log["due_date"])
+        return sorted(upcoming_logs, key=lambda log: log["due_date"])
 
     def update_care_log(self, care_id: int, updates: dict) -> Optional[PlantCare]:
         """Updates fields of an existing care log.
