@@ -1,6 +1,12 @@
 import { useState } from "react";
 import { loginUser } from "../api/auth";
 import { useNavigate, Link } from "react-router-dom";
+import { AlertCircleIcon } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 export default function Login() {
   // State for user inputs and UI feedback
@@ -37,81 +43,71 @@ export default function Login() {
   return (
     <div className="min-h-screen flex">
       {/* Left: Form */}
-      <div className="w-full md:w-1/2 flex items-center justify-center bg-gray-100">
-        <form
-          onSubmit={handleSubmit}
-          className="bg-white p-8 rounded shadow-md w-96 space-y-4"
-          noValidate
-        >
-          <h2 className="text-2xl font-bold text-center">Login</h2>
-          {error && <p className="text-red-600">{error}</p>}
+      <div className="w-full md:w-1/2 flex items-center justify-center bg-muted">
+        <Card className="w-[400px] p-6">
+          <CardHeader>
+            <CardTitle className="text-2xl text-center">Login</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+              {/* Email */}
+              <div className="grid w-full max-w-sm items-center gap-3">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="Enter your email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  autoComplete="email"
+                  disabled={loading}
+                />
+              </div>
 
-          {/* Email */}
-          <div>
-            <label htmlFor="email" className="block mb-1 font-medium">
-              Email
-            </label>
-            <input
-              id="email"
-              type="email"
-              placeholder="Email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-4 py-2 border rounded"
-              aria-label="Email"
-              autoComplete="email"
-              disabled={loading}
-            />
-          </div>
+              {/* Password */}
+              <div className="grid w-full max-w-sm items-center gap-3">
+                <Label htmlFor="password">Password</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder="Enter your password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  autoComplete="current-password"
+                  disabled={loading}
+                />
+              </div>
 
-          {/* Password */}
-          <div>
-            <label htmlFor="password" className="block mb-1 font-medium">
-              Password
-            </label>
-            <input
-              id="password"
-              type="password"
-              placeholder="Password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-2 border rounded"
-              aria-label="Password"
-              autoComplete="current-password"
-              disabled={loading}
-            />
-          </div>
+              {/* Submit */}
+              <Button type="submit" disabled={loading} className="w-full">
+                {loading ? "Logging in..." : "Log In"}
+              </Button>
 
-          {/* Submit */}
-          <button
-            type="submit"
-            disabled={loading}
-            className={`w-full py-2 rounded text-white ${
-              loading
-                ? "bg-green-400 cursor-not-allowed"
-                : "bg-green-600 hover:bg-green-700"
-            }`}
-          >
-            {loading ? "Logging in..." : "Log In"}
-          </button>
+              {error && (
+                <Alert variant="destructive">
+                  <AlertCircleIcon />
+                  <AlertDescription>
+                    <p>{error}</p>
+                  </AlertDescription>
+                </Alert>
+              )}
 
-          <p className="text-center text-sm mt-4">
-            Don't have an account?{" "}
-            <Link to="/register" className="text-green-600 hover:underline">
-              Register here
-            </Link>
-          </p>
-        </form>
+              <p className="text-center text-sm mt-4">
+                Don&apos;t have an account?{" "}
+                <Link to="/register" className="text-primary hover:underline">
+                  Register here
+                </Link>
+              </p>
+            </form>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Right: Image or Content */}
-      <div className="hidden md:block w-1/2 bg-green-100">
-        {/* Optional image or content */}
-        <div className="h-full flex items-center justify-center">
-          <p className="text-2xl font-bold text-gray-700">
-            Welcome to PlantTracker 🌿
-          </p>
-        </div>
+      <div className="hidden md:flex w-1/2 bg-green-100 items-center justify-center">
+        <p className="text-2xl font-bold text-gray-700">
+          Welcome to PlantTracker 🌿
+        </p>
       </div>
     </div>
   );
