@@ -5,7 +5,7 @@ from app.models.database import SessionLocal
 from app.services.plant_service import PlantService
 from app.services.plant_care_service import PlantCareService
 from app.models.care_plan import CarePlan
-from datetime import datetime
+from datetime import date, datetime
 
 plant_care_bp = Blueprint("plant_care", __name__)
 
