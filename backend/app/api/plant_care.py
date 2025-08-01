@@ -348,6 +348,33 @@ def get_user_active_care_plans(user_id):
 
     finally:
         db.close()
+
+
+@plant_care_bp.route("/care-plans/<int:care_plan_id>", methods=["GET"])
+@jwt_required()
+@require_user_id
+def get_care_plan_by_id(user_id, care_plan_id):
+    """Returns a care plan if it exists and belong to the user."""
+    db = SessionLocal()
+    plant_care_service = PlantCareService(db)
+
+    try:
+        care_plan = plant_care_service.get_care_plan_by_id(care_plan_id)
+        if not care_plan:
+            return jsonify({"error": "Unable to find care plan."}), 404
+
+        if care_plan.user_id != user_id:
+            return jsonify({"error": "Unauthorized access to this care plan."}), 403
+
+        return jsonify(serialize_care_plan(care_plan)), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+
+    finally:
+        db.close()
+
+
 @plant_care_bp.route("/<int:care_log_id>", methods=["PATCH"])
 @jwt_required()
 @require_user_id
