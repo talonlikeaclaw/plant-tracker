@@ -4,9 +4,23 @@ from app.decorators.auth import require_user_id
 from app.models.database import SessionLocal
 from app.services.plant_service import PlantService
 from app.services.plant_care_service import PlantCareService
+from app.models.care_plan import CarePlan
 from datetime import datetime
 
 plant_care_bp = Blueprint("plant_care", __name__)
+
+
+def serialize_care_plan(plan: CarePlan) -> dict:
+    """Return a JSON dict from a care plan object"""
+    return {
+        "id": plan.id,
+        "plant_id": plan.plant_id,
+        "care_type_id": plan.care_type_id,
+        "note": plan.note,
+        "start_date": plan.start_date.isoformat(),
+        "frequency_days": plan.frequency_days,
+        "active": plan.active,
+    }
 
 
 @plant_care_bp.route("/plant/<int:plant_id>", methods=["GET"])
