@@ -5,6 +5,7 @@ from app.models.database import Base
 
 class Species(Base):
     """Represents a particular Plant species"""
+
     __tablename__ = "species"
 
     id = Column(Integer, primary_key=True, index=True)

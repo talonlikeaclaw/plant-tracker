@@ -1,3 +1,4 @@
+from app.models.care_plan import CarePlan
 from app.models.care_type import CareType
 from app.models.plant import Plant
 from app.models.plant_care import PlantCare
