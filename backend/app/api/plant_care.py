@@ -284,6 +284,26 @@ def get_care_log(user_id, care_log_id):
         db.close()
 
 
+@plant_care_bp.route("/care-plans/upcoming", methods=["GET"])
+@jwt_required()
+@require_user_id
+def get_upcoming_care_plans(user_id):
+    """Returns a list of upcoming plant care tasks."""
+    db = SessionLocal()
+    plant_care_service = PlantCareService(db)
+
+    try:
+        upcoming_logs = plant_care_service.get_upcoming_care_logs(user_id)
+        if not upcoming_logs:
+            return jsonify({"error": "Unable to find any upcoming care plans."}), 404
+
+        return jsonify(upcoming_logs), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+
+    finally:
+        db.close()
 @plant_care_bp.route("/<int:care_log_id>", methods=["PATCH"])
 @jwt_required()
 @require_user_id
