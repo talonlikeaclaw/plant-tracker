@@ -505,6 +505,64 @@ def update_care_plan(user_id, care_plan_id):
         db.close()
 
 
+@plant_care_bp.route("/care-plans/<int:care_plan_id>/log", methods=["POST"])
+@jwt_required()
+@require_user_id
+def log_care_from_plan(user_id, care_plan_id):
+    """Creates a care log from a Care Plan with optional custom note."""
+    db = SessionLocal()
+    plant_care_service = PlantCareService(db)
+
+    try:
+        # Validate CarePlan ownership
+        care_plan = plant_care_service.get_care_plan_by_id(care_plan_id)
+        if not care_plan:
+            return jsonify({"error": "Care Plan not found"}), 404
+
+        if care_plan.user_id != user_id:  # type: ignore
+            return (
+                jsonify({"error": "Unauthorized: care plan does not belong to you"}),
+                403,
+            )
+
+        # Get custom note if provided
+        data = request.get_json(silent=True) or {}
+        custom_note = data.get("note")
+
+        # Build care log from care plan
+        care_log_data = {
+            "plant_id": care_plan.plant_id,
+            "care_type_id": care_plan.care_type_id,
+            "note": custom_note or "",
+            "care_date": date.today(),
+        }
+
+        new_log = plant_care_service.create_care_log(care_log_data)
+
+        return (
+            jsonify(
+                {
+                    "message": "Care log created successfully!",
+                    "care_log": {
+                        "id": new_log.id,
+                        "plant_id": new_log.plant_id,
+                        "care_type_id": new_log.care_type_id,
+                        "note": new_log.note,
+                        "care_date": new_log.care_date.isoformat(),
+                    },
+                }
+            ),
+            201,
+        )
+
+    except Exception as e:
+        db.rollback()
+        return jsonify({"error": str(e)}), 400
+
+    finally:
+        db.close()
+
+
 @plant_care_bp.route("/<int:care_log_id>", methods=["DELETE"])
 @jwt_required()
 @require_user_id
