@@ -195,6 +195,7 @@ def create_care_plan(user_id):
         # Prepare data
         care_plan_data = {
             "plant_id": plant_id,
+            "user_id": user_id,
             "care_type_id": care_type_id,
             "note": note,
             "start_date": start_date,
@@ -211,6 +212,7 @@ def create_care_plan(user_id):
                     "message": "Care Plan created successfully!",
                     "care_plan": {
                         "id": new_care_plan.id,
+                        "user_id": new_care_plan.user_id,
                         "plant_id": new_care_plan.plant_id,
                         "care_type_id": new_care_plan.care_type_id,
                         "note": new_care_plan.note,
