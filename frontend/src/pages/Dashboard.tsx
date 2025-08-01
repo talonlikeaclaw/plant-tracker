@@ -1,54 +1,36 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { format, isPast, isToday, isWithinInterval, addDays } from "date-fns";
-import { getUserPlants, getUserCareLogs, getCareTypes } from "@/api/dashboard";
-import type { Plant, CareLog, CareType } from "@/types";
+import { format } from "date-fns";
+import { getUserPlants, getUpcomingCareLogs } from "@/api/dashboard";
+import type { Plant, UpcomingCareLog } from "@/types";
 
 export default function Dashboard() {
   const [plants, setPlants] = useState<Plant[]>([]);
-  const [careLogs, setCareLogs] = useState<CareLog[]>([]);
-  const [careTypes, setCareTypes] = useState<CareType[]>([]);
-
-  const today = new Date();
+  const [upcomingLogs, setUpcomingLogs] = useState<UpcomingCareLog[]>([]);
 
   useEffect(() => {
     async function loadDashboard() {
-      const [plantsRes, logsRes, typesRes] = await Promise.all([
-        getUserPlants(),
-        getUserCareLogs(),
-        getCareTypes(),
-      ]);
-      setPlants(plantsRes);
-      setCareLogs(logsRes);
-      setCareTypes(typesRes);
+      try {
+        const [plantsRes, upcomingRes] = await Promise.all([
+          getUserPlants(),
+          getUpcomingCareLogs(),
+        ]);
+
+        console.log("plantsRes:", plantsRes);
+        console.log("upcomingRes:", upcomingRes);
+
+        setPlants(plantsRes ?? []);
+        setUpcomingLogs(upcomingRes ?? []);
+      } catch (err) {
+        console.error("Dashboard load failed:", err);
+      }
     }
+
     loadDashboard();
   }, []);
 
   const speciesCount = new Set(plants.map((p) => p.species_id)).size;
-
-  // TODO: Update backend to add care plans because care logs are in the past
-  const upcomingLogs = careLogs.filter((log) => {
-    const date = new Date(log.care_date);
-    return isWithinInterval(date, { start: today, end: addDays(today, 7) });
-  });
-
-  // TODO: Updata to care plans after implementation
-  const overdueLogs = careLogs.filter((log) => {
-    const date = new Date(log.care_date);
-    return isPast(date) && !isToday(date);
-  });
-
-  const recentLogs = [...careLogs]
-    .sort(
-      (a, b) =>
-        new Date(b.care_date).getTime() - new Date(a.care_date).getTime(),
-    )
-    .slice(0, 5);
-
-  const getCareTypeName = (id: number) =>
-    careTypes.find((t) => t.id === id)?.name || "Unknown";
 
   return (
     <div className="p-6 space-y-6">
@@ -64,9 +46,6 @@ export default function Dashboard() {
         <Card>
           <CardContent>Upcoming Tasks: {upcomingLogs.length}</CardContent>
         </Card>
-        <Card>
-          <CardContent>Overdue: {overdueLogs.length}</CardContent>
-        </Card>
       </div>
 
       <div>
@@ -76,43 +55,25 @@ export default function Dashboard() {
             <p className="text-sm text-muted-foreground">No upcoming tasks</p>
           ) : (
             upcomingLogs.map((log) => (
-              <Card key={log.id}>
+              <Card key={`${log.plant_id}-${log.due_date}`}>
                 <CardContent className="flex justify-between items-center">
                   <div>
-                    <p className="font-medium">
-                      {plants.find((p) => p.id === log.plant_id)?.nickname ||
-                        "Unknown Plant"}
-                    </p>
+                    <p className="font-medium">{log.plant_nickname}</p>
                     <p className="text-sm text-muted-foreground">
-                      {getCareTypeName(log.care_type_id)} — Due{" "}
-                      {format(new Date(log.care_date), "PPP")}
+                      {log.care_type} - Due{" "}
+                      {isNaN(new Date(log.due_date).getTime())
+                        ? "Invalid date"
+                        : format(new Date(log.due_date), "PPP")}
                     </p>
+                    {log.note && (
+                      <p className="text-xs text-muted-foreground italic mt-1">
+                        {log.note}
+                      </p>
+                    )}
                   </div>
                   <Button size="sm">Mark as Done</Button>
                 </CardContent>
               </Card>
-            ))
-          )}
-        </div>
-      </div>
-
-      <div>
-        <h2 className="text-xl font-semibold mb-2">Recently Logged Care</h2>
-        <div className="space-y-1">
-          {recentLogs.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              No recent care logged
-            </p>
-          ) : (
-            recentLogs.map((log) => (
-              <p key={log.id} className="text-sm">
-                You {getCareTypeName(log.care_type_id).toLowerCase()}ed{" "}
-                <strong>
-                  {plants.find((p) => p.id === log.plant_id)?.nickname ||
-                    "Unknown Plant"}
-                </strong>{" "}
-                on {format(new Date(log.care_date), "PPPp")}
-              </p>
             ))
           )}
         </div>
