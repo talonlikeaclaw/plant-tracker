@@ -206,7 +206,7 @@ class PlantCareService:
                     "plant_nickname": plan.plant.nickname,
                     "care_type": plan.care_type.name,
                     "note": plan.note,
-                    "due_date": next_due,
+                    "due_date": next_due.isoformat(),
                     "days_until_due": (next_due - today).days,
                 }
             )
