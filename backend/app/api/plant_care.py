@@ -447,6 +447,64 @@ def update_care_log(user_id, care_log_id):
         db.close()
 
 
+@plant_care_bp.route("/care-plans/<int:care_plan_id>", methods=["PATCH"])
+@jwt_required()
+@require_user_id
+def update_care_plan(user_id, care_plan_id):
+    """Updates an existing Care Plan by ID."""
+    db = SessionLocal()
+    plant_care_service = PlantCareService(db)
+
+    try:
+        # Fetch the care plan
+        care_plan = plant_care_service.get_care_plan_by_id(care_plan_id)
+
+        if not care_plan:
+            return jsonify({"error": "Care Plan not found"}), 404
+
+        if care_plan.user_id != user_id:  # type: ignore
+            return (
+                jsonify({"error": "Unauthorized: care plan does not belong to you"}),
+                403,
+            )
+
+        data = request.get_json()
+        allowed_fields = {
+            "plant_id",
+            "care_type_id",
+            "note",
+            "start_date",
+            "frequency_days",
+            "active",
+        }
+
+        updates = {k: v for k, v in data.items() if k in allowed_fields}
+
+        if not updates:
+            return jsonify({"error": "No valid fields provided for update."}), 400
+
+        updated = plant_care_service.update_care_plan(care_plan_id, updates)
+
+        if not updated:
+            return jsonify({"error": "Care Plan could not be updated."}), 400
+
+        return (
+            jsonify(
+                {
+                    "message": "Care Plan updated successfully!",
+                    "care_plan": serialize_care_plan(updated),
+                }
+            ),
+            200,
+        )
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+
+    finally:
+        db.close()
+
+
 @plant_care_bp.route("/<int:care_log_id>", methods=["DELETE"])
 @jwt_required()
 @require_user_id
