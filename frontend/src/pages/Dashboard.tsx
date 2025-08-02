@@ -43,7 +43,8 @@ export default function Dashboard() {
       {/* Quick Actions */}
       <h2 className="text-xl font-semibold">Quick Actions</h2>
       <div className="space-y-2">
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-6 gap-4">
+          <Button className="w-full">View Your Plants</Button>
           <Button className="w-full">Add New Plant</Button>
           <Button className="w-full">Log Care Entry</Button>
           <Button className="w-full">Setup Care Plan</Button>
