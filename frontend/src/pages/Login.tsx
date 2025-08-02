@@ -42,16 +42,19 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex">
+    <div className="min-h-screen flex bg-background text-foreground">
       {/* Theme toggle in top-right */}
       <div className="absolute top-4 right-4">
         <ModeToggle />
       </div>
+
       {/* Left: Form */}
       <div className="w-full md:w-1/2 flex items-center justify-center bg-muted">
-        <Card className="w-[400px] p-6">
+        <Card className="w-[400px] p-6 bg-card text-card-foreground">
           <CardHeader>
-            <CardTitle className="text-2xl text-center">Login</CardTitle>
+            <CardTitle className="text-2xl text-center text-primary">
+              Login
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4" noValidate>
@@ -66,6 +69,7 @@ export default function Login() {
                   onChange={(e) => setEmail(e.target.value)}
                   autoComplete="email"
                   disabled={loading}
+                  className="bg-input text-foreground"
                 />
               </div>
 
@@ -80,6 +84,7 @@ export default function Login() {
                   onChange={(e) => setPassword(e.target.value)}
                   autoComplete="current-password"
                   disabled={loading}
+                  className="bg-input text-foreground"
                 />
               </div>
 
@@ -87,7 +92,7 @@ export default function Login() {
               <Button
                 type="submit"
                 disabled={loading}
-                className="w-full text-primary-foreground"
+                className="w-full bg-primary text-primary-foreground hover:opacity-90"
               >
                 {loading ? "Logging in..." : "Log In"}
               </Button>
@@ -112,7 +117,7 @@ export default function Login() {
         </Card>
       </div>
 
-      {/* Right: Image or Content */}
+      {/* Right: Welcome Message */}
       <div className="hidden md:flex w-1/2 items-center justify-center bg-emerald-100 dark:bg-emerald-900">
         <p className="text-2xl font-bold text-primary">
           Welcome to PlantTracker 🌿
