@@ -59,21 +59,35 @@ export default function Dashboard() {
           <CardHeader>
             <CardTitle>Total Plants</CardTitle>
           </CardHeader>
-          <CardContent>{plants.length} plants to care for!</CardContent>
+          <CardContent>
+            {plants.length === 0
+              ? "No plants to care for."
+              : `${plants.length} plant${plants.length > 1 ? "s" : ""} to care for!`}
+          </CardContent>
         </Card>
 
         <Card className="bg-muted">
           <CardHeader>
             <CardTitle>Species Tracked</CardTitle>
           </CardHeader>
-          <CardContent>{speciesCount} unique species.</CardContent>
+          <CardContent>
+            {speciesCount === 0
+              ? "No species tracked yet."
+              : `${speciesCount} unique species.`}
+          </CardContent>
         </Card>
 
         <Card className="bg-muted">
           <CardHeader>
             <CardTitle>Upcoming Tasks</CardTitle>
           </CardHeader>
-          <CardContent>{upcomingLogs.length} upcoming care.</CardContent>
+          <CardContent>
+            {upcomingLogs.length === 0
+              ? "No upcoming tasks."
+              : `${upcomingLogs.length} upcoming care entr${
+                  upcomingLogs.length === 1 ? "y" : "ies"
+                }.`}
+          </CardContent>
         </Card>
 
         <Card className="bg-muted">
@@ -81,7 +95,9 @@ export default function Dashboard() {
             <CardTitle>Care Log History</CardTitle>
           </CardHeader>
           <CardContent>
-            {careLogs.length} care {careLogs.length === 1 ? "log." : "logs."}
+            {careLogs.length === 0
+              ? "No care logs yet."
+              : `${careLogs.length} care log${careLogs.length > 1 ? "s" : ""}.`}
           </CardContent>
         </Card>
       </div>
