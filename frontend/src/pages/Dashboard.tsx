@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardTitle, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { ModeToggle } from "@/components/mode-toggle";
 import { format } from "date-fns";
 import {
   getUserPlants,
@@ -37,9 +38,15 @@ export default function Dashboard() {
   const speciesCount = new Set(plants.map((p) => p.species_id)).size;
 
   return (
-    <div className="min-h-screen w-full bg-background p-6 space-y-8 flex flex-col">
+    <div className="min-h-screen w-full bg-background text-foreground p-6 space-y-8 flex flex-col">
+      {/* Theme toggle */}
+      <div className="absolute top-4 right-4">
+        <ModeToggle />
+      </div>
+
       {/* Header */}
       <h1 className="text-2xl font-bold">Welcome back!</h1>
+
       {/* Quick Actions */}
       <h2 className="text-xl font-semibold">Quick Actions</h2>
       <div className="space-y-2">
@@ -56,7 +63,7 @@ export default function Dashboard() {
       {/* Stats */}
       <h2 className="text-xl font-semibold">At a Glance</h2>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card className="bg-muted">
+        <Card className="bg-card text-card-foreground">
           <CardHeader>
             <CardTitle>Total Plants</CardTitle>
           </CardHeader>
@@ -67,7 +74,7 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        <Card className="bg-muted">
+        <Card className="bg-card text-card-foreground">
           <CardHeader>
             <CardTitle>Species Tracked</CardTitle>
           </CardHeader>
@@ -78,7 +85,7 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        <Card className="bg-muted">
+        <Card className="bg-card text-card-foreground">
           <CardHeader>
             <CardTitle>Upcoming Tasks</CardTitle>
           </CardHeader>
@@ -91,7 +98,7 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        <Card className="bg-muted">
+        <Card className="bg-card text-card-foreground">
           <CardHeader>
             <CardTitle>Care Log History</CardTitle>
           </CardHeader>
@@ -112,7 +119,7 @@ export default function Dashboard() {
           <div className="space-y-2">
             {upcomingLogs.map((log) => (
               <Card
-                className="bg-muted"
+                className="bg-card text-card-foreground"
                 key={`${log.plant_id}-${log.due_date}`}
               >
                 <CardContent className="flex justify-between items-center">
