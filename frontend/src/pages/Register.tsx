@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { ModeToggle } from "@/components/mode-toggle";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export default function Register() {
@@ -62,6 +63,10 @@ export default function Register() {
 
   return (
     <div className="min-h-screen flex">
+      {/* Theme toggle in top-right */}
+      <div className="absolute top-4 right-4">
+        <ModeToggle />
+      </div>
       {/* Left: Form */}
       <div className="w-full md:w-1/2 flex items-center justify-center bg-muted">
         <Card className="w-[400px] p-6">
@@ -130,7 +135,11 @@ export default function Register() {
               </div>
 
               {/* Submit */}
-              <Button type="submit" disabled={loading} className="w-full">
+              <Button
+                type="submit"
+                disabled={loading}
+                className="w-full text-primary-foreground"
+              >
                 {loading ? "Registering..." : "Register"}
               </Button>
 
@@ -155,8 +164,8 @@ export default function Register() {
       </div>
 
       {/* Right: Image or Content */}
-      <div className="hidden md:flex w-1/2 bg-green-100 items-center justify-center">
-        <p className="text-2xl font-bold text-gray-700">
+      <div className="hidden md:flex w-1/2 items-center justify-center bg-emerald-100 dark:bg-emerald-900">
+        <p className="text-2xl font-bold text-primary">
           Welcome to PlantTracker 🌿
         </p>
       </div>
