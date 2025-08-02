@@ -23,7 +23,7 @@ export default function Login() {
 
     // Basic validation for empty fields
     if (!email || !password) {
-      setError("Email and password are required");
+      setError("Email and password are required.");
       return;
     }
 
@@ -34,7 +34,7 @@ export default function Login() {
       localStorage.setItem("token", data.access_token);
       navigate("/dashboard");
     } catch (err) {
-      setError("Invalid email or password");
+      setError("Invalid email or password.");
     } finally {
       setLoading(false);
     }
