@@ -2,26 +2,30 @@ import { useEffect, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
-import { getUserPlants, getUpcomingCareLogs } from "@/api/dashboard";
-import type { Plant, UpcomingCareLog } from "@/types";
+import {
+  getUserPlants,
+  getUpcomingCareLogs,
+  getPastCareLogs,
+} from "@/api/dashboard";
+import type { Plant, CareLog, UpcomingCareLog } from "@/types";
 
 export default function Dashboard() {
   const [plants, setPlants] = useState<Plant[]>([]);
   const [upcomingLogs, setUpcomingLogs] = useState<UpcomingCareLog[]>([]);
+  const [careLogs, setCareLogs] = useState<CareLog[]>([]);
 
   useEffect(() => {
     async function loadDashboard() {
       try {
-        const [plantsRes, upcomingRes] = await Promise.all([
+        const [plantsRes, upcomingRes, careLogs] = await Promise.all([
           getUserPlants(),
           getUpcomingCareLogs(),
+          getPastCareLogs(),
         ]);
-
-        console.log("plantsRes:", plantsRes);
-        console.log("upcomingRes:", upcomingRes);
 
         setPlants(plantsRes ?? []);
         setUpcomingLogs(upcomingRes ?? []);
+        setCareLogs(careLogs ?? []);
       } catch (err) {
         console.error("Dashboard load failed:", err);
       }
