@@ -4,6 +4,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { AlertCircleIcon } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ModeToggle } from "@/components/mode-toggle";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -42,6 +43,10 @@ export default function Login() {
 
   return (
     <div className="min-h-screen flex">
+      {/* Theme toggle in top-right */}
+      <div className="absolute top-4 right-4">
+        <ModeToggle />
+      </div>
       {/* Left: Form */}
       <div className="w-full md:w-1/2 flex items-center justify-center bg-muted">
         <Card className="w-[400px] p-6">
@@ -79,7 +84,11 @@ export default function Login() {
               </div>
 
               {/* Submit */}
-              <Button type="submit" disabled={loading} className="w-full">
+              <Button
+                type="submit"
+                disabled={loading}
+                className="w-full text-primary-foreground"
+              >
                 {loading ? "Logging in..." : "Log In"}
               </Button>
 
@@ -104,8 +113,8 @@ export default function Login() {
       </div>
 
       {/* Right: Image or Content */}
-      <div className="hidden md:flex w-1/2 bg-green-100 items-center justify-center">
-        <p className="text-2xl font-bold text-gray-700">
+      <div className="hidden md:flex w-1/2 items-center justify-center bg-emerald-100 dark:bg-emerald-900">
+        <p className="text-2xl font-bold text-primary">
           Welcome to PlantTracker 🌿
         </p>
       </div>
