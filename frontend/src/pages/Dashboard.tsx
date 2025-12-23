@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Card,
   CardContent,
@@ -17,6 +18,7 @@ import {
 import type { Plant, CareLog, UpcomingCareLog } from "@/types";
 
 export default function Dashboard() {
+  const navigate = useNavigate();
   const [plants, setPlants] = useState<Plant[]>([]);
   const [upcomingLogs, setUpcomingLogs] = useState<UpcomingCareLog[]>([]);
   const [careLogs, setCareLogs] = useState<CareLog[]>([]);
@@ -79,7 +81,7 @@ export default function Dashboard() {
             <Button
               variant="outline"
               className="w-full"
-              onClick={() => alert("Add Plant - Coming soon!")}
+              onClick={() => navigate("/plants/add")}
             >
               Add Plant
             </Button>

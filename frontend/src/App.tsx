@@ -8,6 +8,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import Dashboard from "@/pages/Dashboard";
 import Login from "@/pages/Login";
 import Register from "@/pages/Register";
+import AddPlant from "@/pages/AddPlant";
 
 function App() {
   const isLoggedIn = !!localStorage.getItem("token");
@@ -27,6 +28,10 @@ function App() {
           <Route
             path="/dashboard"
             element={isLoggedIn ? <Dashboard /> : <Navigate to="/login" />}
+          />
+          <Route
+            path="/plants/add"
+            element={isLoggedIn ? <AddPlant /> : <Navigate to="/login" />}
           />
         </Routes>
       </Router>
