@@ -21,9 +21,9 @@ export async function getPastCareLogs(): Promise<CareLog[]> {
   if (plants.length == 0) return [];
 
   const careLogPromises = plants.map((plant) =>
-    api.get<CareLog[]>(`/plant-care/plant/${plant.id}`),
+    api.get<{ care_logs: CareLog[] }>(`/plant-care/plant/${plant.id}`),
   );
   const careLogsPerPlant = await Promise.all(careLogPromises);
-  const allCareLogs = careLogsPerPlant.flatMap((res) => res.data);
+  const allCareLogs = careLogsPerPlant.flatMap((res) => res.data.care_logs);
   return allCareLogs;
 }
