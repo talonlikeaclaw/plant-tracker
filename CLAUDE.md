@@ -90,10 +90,12 @@ PlantTracker/
 **API Endpoints:**
 - `/api/auth/` - POST register, login (returns JWT token)
 - `/api/users/` - User management
-- `/api/plants/` - Plant CRUD
-- `/api/species/` - Plant species reference
-- `/api/plant-care/` - Care activity logs
-- `/api/care-types/` - Care types (system + user-created)
+- `/api/plants/` - Plant CRUD (create, read, update, delete)
+- `/api/species/` - Plant species reference (crowdsourced database)
+- `/api/plant-care/` - Care activity logs CRUD
+- `/api/care-plans/` - Care plan scheduling (create, read, update, delete, active/inactive)
+- `/api/care-types/` - Care types (system defaults + user-created custom types with edit/delete)
+- `/api/dashboard/` - Dashboard data (user plants, upcoming care logs, past care logs)
 
 **Database Models:**
 - User → Plants (one-to-many, cascade delete)
@@ -106,20 +108,34 @@ PlantTracker/
 **Directory Layout:**
 - `src/api/` - HTTP client layer (axios instance + endpoint modules)
   - `axios.ts` - Axios instance with JWT interceptor
-  - `auth.ts`, `dashboard.ts` - API endpoint functions
-- `src/pages/` - Route components (Login, Register, Dashboard)
-- `src/components/ui/` - shadcn/ui component library
-- `src/types/` - TypeScript interfaces
+  - `auth.ts`, `dashboard.ts`, `plants.ts`, `species.ts`, `careLogs.ts`, `carePlans.ts`, `careTypes.ts` - API endpoint functions
+- `src/pages/` - Route components
+  - Authentication: `Login.tsx`, `Register.tsx`
+  - Dashboard: `Dashboard.tsx`
+  - Plants: `ViewPlants.tsx`, `AddPlant.tsx`
+  - Species: `Species.tsx`
+  - Care Plans: `CarePlans.tsx`, `AddCarePlan.tsx`
+  - Care: `LogCare.tsx`, `CareTypes.tsx`
+- `src/components/` - Reusable components
+  - `ui/` - shadcn/ui component library
+  - `mode-toggle.tsx` - Theme toggle component
+  - `theme-provider.tsx` - Theme context provider
+- `src/types/` - TypeScript interfaces (Plant, Species, CareLog, CarePlan, CareType, UpcomingCareLog)
 - `src/lib/utils.ts` - Utility functions
-- `App.tsx` - React Router setup
+- `App.tsx` - React Router setup with protected routes
 - `main.tsx` - Entry point
 
 **Key Patterns:**
 - JWT stored in localStorage, auto-injected via axios interceptor
-- React Router for client-side routing (protected /dashboard route)
+- React Router for client-side routing with protected routes (redirect to /login if not authenticated)
 - Theme provider with dark mode support (localStorage key: "vite-ui-theme")
 - shadcn/ui components styled with Tailwind CSS + CSS variables
 - Type-safe API calls with TypeScript interfaces in `src/types/`
+- Dialog modals for confirmations, inline forms, and destructive actions
+- Success/error alert display at page level with auto-clear patterns
+- Loading states for async operations with disabled buttons
+- Auto-refresh data after mutations (create, update, delete)
+- Empty states with CTAs to guide user actions
 
 **Styling:**
 - Tailwind CSS 4.1.11 with CSS variables in `index.css` (oklch color space)
@@ -152,11 +168,18 @@ VITE_API_URL=<backend_url>  # Frontend - points to /api
 
 ## Important Implementation Details
 
-### Database Migrations
+### Database Migrations & Seeding
+**Migrations:**
 - Alembic manages migrations in `backend/alembic/versions/`
 - Migrations are NOT automatically applied on startup
 - Run `alembic upgrade head` manually after pulling new migrations
 - Tables are auto-created via `Base.metadata.create_all()` in run.py, but use Alembic for schema changes
+
+**Seeding Default Data:**
+- Default care types (user_id=NULL) must be seeded manually
+- Run once after database setup: `python seed_defaults.py`
+- Default types: Watering, Fertilizing, Repotting, Pruning, Pest Control, Misting
+- Script checks for existing defaults and skips if already present
 
 ### CORS & API Communication
 - Flask CORS enabled with `supports_credentials=True`
@@ -184,10 +207,96 @@ VITE_API_URL=<backend_url>  # Frontend - points to /api
 - Configuration in `components.json` (new-york style, CSS variables)
 - Add new components: Install via shadcn CLI (outside this codebase)
 - All components use Tailwind classes + CSS variables for theming
+- Enhanced checkbox component with larger size, thicker borders for better visual feedback
+
+## Implemented Features
+
+### Dashboard (`/dashboard`)
+**Layout order:**
+1. Header with title and theme toggle
+2. Success/Error alerts
+3. Quick Actions (6 buttons):
+   - Log Care (outline) - Most frequent daily activity
+   - Your Plants (outline) - View plant collection
+   - Add Plant (primary) - Main CTA for growing collection
+   - Species (outline) - Reference/setup
+   - Care Plans (outline) - Setup and management
+   - Care Types (outline) - Configuration
+4. Upcoming Care section - Cards with "Mark Done" buttons and confirmation dialog
+5. Stats Grid (4 cards) - Total Plants, Species Tracked, Upcoming Tasks, Care History
+
+**Key Features:**
+- Mark as Done functionality with confirmation dialog for upcoming care tasks
+- Auto-refresh after completing care tasks
+- Success/error message display
+- Real-time stats based on user data
+
+### Plant Management
+
+**View Plants (`/plants`)**
+- Grid display of all plants with species info, location, dates
+- Edit functionality: Dialog with pre-filled form for nickname, species, location, last watered
+- Delete functionality: Confirmation dialog with cascade deletion warning
+- Search by species with dropdown filter
+- Empty state with CTA to add first plant
+
+**Add Plant (`/plants/add`)**
+- Form: nickname (required), species dropdown, location, date added, last watered
+- Quick-add species dialog for adding new species inline
+- Auto-select newly created species
+- Validation and error handling
+
+### Species Management (`/species`)
+**Crowdsourced species database** where any user can contribute:
+- Browse all species in grid layout
+- Add new species form with fields: common name, scientific name, sunlight, water requirements
+- Toggle form visibility
+- System vs user-created species indicators
+
+### Care Plans (`/care-plans`, `/care-plans/add`)
+**View Care Plans:**
+- List all active and inactive care plans
+- Display: plant name, care type, frequency (days), start date, notes, status badge
+- Filter by active/inactive
+
+**Add Care Plan:**
+- Plant selection dropdown showing species info card
+- Care type selection with quick-add dialog for custom types
+- Auto-suggest watering frequency based on species water requirements
+- Smart parsing: "weekly" → 7 days, "bi-weekly" → 14 days, "monthly" → 30 days
+- Frequency input (days), start date, notes
+- Validation and error handling
+
+### Care Logging (`/log-care`)
+**Two modes for flexible logging:**
+1. **Single Plant Mode** - Quick form for logging one plant's care
+2. **Multi-Plant Mode** - Batch logging with checkboxes for multiple plants at once
+
+**Features:**
+- Plant selection, care type selection, care date, notes
+- Recent care logs display (last 10 activities)
+- Real-time updates after logging
+- Enhanced checkbox visual states for better UX
+
+### Care Types (`/care-types`)
+**Manage care type library:**
+- System default types (read-only, muted background): Watering, Fertilizing, etc.
+- User custom types (editable): Edit dialog and delete confirmation
+- Add custom care type form
+- Separation of system vs user types for clarity
+
+### Authentication
+- Login page (`/login`) with theme toggle
+- Registration page (`/register`) with theme toggle
+- JWT token storage and management
+- Protected routes with automatic redirect to login
 
 ### Current State
-- Active branch: `feature/react-frontend` (theme mode improvements)
-- Recent work: Theme mode toggle, CSS variable standardization, dark mode support
+- Active branch: `feature/react-frontend`
+- Fully functional plant tracking application with complete CRUD operations
+- All core features implemented: plants, species, care plans, care types, care logging
+- Dashboard with upcoming care and mark as done functionality
+- Dark/light theme toggle on all pages
 - Database service commented out in docker-compose.yml (uses local PostgreSQL)
 
 ## Tech Stack Summary
