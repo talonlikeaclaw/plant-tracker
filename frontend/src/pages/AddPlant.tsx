@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { AlertCircleIcon, CheckCircle2Icon } from "lucide-react";
+import { useNavigate, Link } from "react-router-dom";
+import { AlertCircleIcon, CheckCircle2Icon, PlusCircleIcon } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -18,9 +18,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { createPlant } from "@/api/plants";
 import { getAllSpecies } from "@/api/species";
+import SpeciesForm from "@/components/SpeciesForm";
 import type { Species } from "@/types";
 
 export default function AddPlant() {
@@ -37,20 +46,30 @@ export default function AddPlant() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [dialogOpen, setDialogOpen] = useState(false);
+
+  const loadSpecies = async () => {
+    try {
+      const data = await getAllSpecies();
+      setSpecies(data.species ?? []);
+    } catch (err) {
+      console.error("Failed to load species:", err);
+      setError("Failed to load species list");
+    }
+  };
 
   useEffect(() => {
-    async function loadSpecies() {
-      try {
-        const data = await getAllSpecies();
-        setSpecies(data.species ?? []);
-      } catch (err) {
-        console.error("Failed to load species:", err);
-        setError("Failed to load species list");
-      }
-    }
-
     loadSpecies();
   }, []);
+
+  const handleSpeciesAdded = (newSpecies: any) => {
+    setDialogOpen(false);
+    loadSpecies();
+    // Auto-select the newly added species
+    if (newSpecies?.id) {
+      setForm({ ...form, species_id: newSpecies.id.toString() });
+    }
+  };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -181,6 +200,42 @@ export default function AddPlant() {
                       )}
                     </SelectContent>
                   </Select>
+                  <div className="flex items-center gap-2 pt-1">
+                    <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+                      <DialogTrigger asChild>
+                        <Button
+                          type="button"
+                          variant="link"
+                          size="sm"
+                          className="h-auto p-0 text-sm"
+                        >
+                          <PlusCircleIcon className="h-3 w-3 mr-1" />
+                          Quick add species
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Add New Species</DialogTitle>
+                          <DialogDescription>
+                            Add a new species to the community database
+                          </DialogDescription>
+                        </DialogHeader>
+                        <SpeciesForm
+                          onSuccess={handleSpeciesAdded}
+                          onCancel={() => setDialogOpen(false)}
+                          compact
+                        />
+                      </DialogContent>
+                    </Dialog>
+                    <span className="text-sm text-muted-foreground">or</span>
+                    <Link
+                      to="/species"
+                      target="_blank"
+                      className="text-sm text-primary hover:underline"
+                    >
+                      Browse all species
+                    </Link>
+                  </div>
                 </div>
 
                 {/* Location */}
