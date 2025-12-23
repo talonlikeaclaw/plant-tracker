@@ -57,3 +57,12 @@ export type UpcomingCareLog = {
   due_date: string;
   days_until_due: number;
 };
+
+// Species
+export interface Species {
+  id: number;
+  common_name: string;
+  scientific_name?: string;
+  sunlight?: string;
+  water_requirements?: string;
+}
