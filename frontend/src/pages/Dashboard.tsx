@@ -95,7 +95,7 @@ export default function Dashboard() {
             <Button
               variant="outline"
               className="w-full"
-              onClick={() => alert("Care Plans - Coming soon!")}
+              onClick={() => navigate("/care-plans")}
             >
               Care Plans
             </Button>
@@ -109,9 +109,9 @@ export default function Dashboard() {
             <Button
               variant="outline"
               className="w-full"
-              onClick={() => alert("Settings - Coming soon!")}
+              onClick={() => navigate("/care-types")}
             >
-              Settings
+              Care Types
             </Button>
           </div>
         </section>
