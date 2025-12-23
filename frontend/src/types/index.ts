@@ -52,6 +52,7 @@ export type UpcomingCareLog = {
   plant_id: number;
   plant_nickname: string;
   care_type: string;
+  care_type_id: number;
   note?: string;
   due_date: string;
   days_until_due: number;

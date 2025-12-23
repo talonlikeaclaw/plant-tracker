@@ -407,6 +407,7 @@ export default function CareTypes() {
                 <DialogTitle>Delete Care Type</DialogTitle>
                 <DialogDescription>
                   Are you sure you want to delete "{typeToDelete?.name}"? This
+                  will also delete all associated care plans and care logs. This
                   action cannot be undone.
                 </DialogDescription>
               </DialogHeader>
