@@ -47,13 +47,18 @@ export default function Register() {
 
     setLoading(true);
     try {
-      const data = await registerUser(form);
+      const data = await registerUser({
+        username: form.username,
+        email: form.email,
+        password: form.password,
+      });
       localStorage.setItem("token", data.access_token);
       navigate("/dashboard");
     } catch (err: any) {
       console.error(err);
       setError(
-        err.response?.data?.message ||
+        err.response?.data?.error ||
+          err.response?.data?.message ||
           "Something went wrong. Please try again.",
       );
     } finally {
