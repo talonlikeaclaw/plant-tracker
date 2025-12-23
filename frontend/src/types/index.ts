@@ -31,12 +31,11 @@ export interface CareLog {
 // Care Plans
 export interface CarePlan {
   id: number;
-  user_id: number;
   plant_id: number;
   care_type_id: number;
   start_date: string;
   frequency_days: number;
-  note: string;
+  note?: string;
   active: boolean;
 }
 
