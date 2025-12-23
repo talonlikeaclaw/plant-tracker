@@ -139,7 +139,7 @@ export default function Dashboard() {
           <h2 className="text-2xl font-semibold mb-4">Quick Actions</h2>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
             <Button
-              variant="outline"
+              variant="default"
               className="w-full"
               onClick={() => navigate("/plants")}
             >
@@ -153,28 +153,28 @@ export default function Dashboard() {
               Add Plant
             </Button>
             <Button
-              variant="outline"
+              variant="default"
               className="w-full"
               onClick={() => navigate("/species")}
             >
               Species
             </Button>
             <Button
-              variant="outline"
+              variant="default"
               className="w-full"
               onClick={() => navigate("/log-care")}
             >
               Log Care
             </Button>
             <Button
-              variant="outline"
+              variant="default"
               className="w-full"
               onClick={() => navigate("/care-plans")}
             >
               Care Plans
             </Button>
             <Button
-              variant="outline"
+              variant="default"
               className="w-full"
               onClick={() => navigate("/care-types")}
             >
