@@ -9,6 +9,7 @@ import Dashboard from "@/pages/Dashboard";
 import Login from "@/pages/Login";
 import Register from "@/pages/Register";
 import AddPlant from "@/pages/AddPlant";
+import Species from "@/pages/Species";
 
 function App() {
   const isLoggedIn = !!localStorage.getItem("token");
@@ -32,6 +33,10 @@ function App() {
           <Route
             path="/plants/add"
             element={isLoggedIn ? <AddPlant /> : <Navigate to="/login" />}
+          />
+          <Route
+            path="/species"
+            element={isLoggedIn ? <Species /> : <Navigate to="/login" />}
           />
         </Routes>
       </Router>

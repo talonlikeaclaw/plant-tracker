@@ -102,7 +102,7 @@ export default function Dashboard() {
             <Button
               variant="outline"
               className="w-full"
-              onClick={() => alert("Species - Coming soon!")}
+              onClick={() => navigate("/species")}
             >
               Species
             </Button>
