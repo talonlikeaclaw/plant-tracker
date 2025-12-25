@@ -89,7 +89,7 @@ PlantTracker/
 
 **API Endpoints:**
 - `/api/auth/` - POST register, login (returns JWT token)
-- `/api/users/` - User management
+- `/api/users/` - User management (GET current user info, PATCH update user, PATCH /password for password change)
 - `/api/plants/` - Plant CRUD (create, read, update, delete)
 - `/api/species/` - Plant species reference (crowdsourced database)
 - `/api/plant-care/` - Care activity logs CRUD
@@ -107,11 +107,12 @@ PlantTracker/
 
 **Directory Layout:**
 - `src/api/` - HTTP client layer (axios instance + endpoint modules)
-  - `axios.ts` - Axios instance with JWT interceptor
-  - `auth.ts`, `dashboard.ts`, `plants.ts`, `species.ts`, `careLogs.ts`, `carePlans.ts`, `careTypes.ts` - API endpoint functions
+  - `axios.ts` - Axios instance with JWT interceptor and 401 response handler
+  - `auth.ts`, `users.ts`, `dashboard.ts`, `plants.ts`, `species.ts`, `careLogs.ts`, `carePlans.ts`, `careTypes.ts` - API endpoint functions
 - `src/pages/` - Route components
   - Authentication: `Login.tsx`, `Register.tsx`
   - Dashboard: `Dashboard.tsx`
+  - Account: `Settings.tsx`
   - Plants: `ViewPlants.tsx`, `AddPlant.tsx`
   - Species: `Species.tsx`
   - Care Plans: `CarePlans.tsx`, `AddCarePlan.tsx`
@@ -119,6 +120,7 @@ PlantTracker/
 - `src/components/` - Reusable components
   - `ui/` - shadcn/ui component library
   - `mode-toggle.tsx` - Theme toggle component
+  - `user-menu.tsx` - User account dropdown menu (logout, settings)
   - `theme-provider.tsx` - Theme context provider
 - `src/types/` - TypeScript interfaces (Plant, Species, CareLog, CarePlan, CareType, UpcomingCareLog)
 - `src/lib/utils.ts` - Utility functions
@@ -285,11 +287,14 @@ VITE_API_URL=<backend_url>  # Frontend - points to /api
 - Add custom care type form
 - Separation of system vs user types for clarity
 
-### Authentication
+### Authentication & Account Management
 - Login page (`/login`) with theme toggle
 - Registration page (`/register`) with theme toggle
 - JWT token storage and management
 - Protected routes with automatic redirect to login
+- Axios response interceptor for automatic logout on 401 (expired/invalid token)
+- User menu dropdown with logout and settings access
+- Settings page (`/settings`) for viewing account info and changing password (password change coming soon)
 
 ### Current State
 - Active branch: `feature/react-frontend`
