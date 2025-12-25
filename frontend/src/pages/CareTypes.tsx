@@ -161,18 +161,24 @@ export default function CareTypes() {
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="border-b">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-foreground">
-              Care Types
-            </h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              Manage your plant care activity types
-            </p>
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex-1 min-w-0">
+              <h1 className="text-xl sm:text-2xl font-bold text-foreground truncate">
+                Care Types
+              </h1>
+              <p className="text-sm text-muted-foreground mt-1 hidden sm:block">
+                Manage your plant care activity types
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              onClick={() => navigate("/dashboard")}
+              className="shrink-0 w-full sm:w-auto"
+            >
+              Back to Dashboard
+            </Button>
           </div>
-          <Button variant="outline" onClick={() => navigate("/dashboard")}>
-            Back to Dashboard
-          </Button>
         </div>
       </header>
 
@@ -197,16 +203,17 @@ export default function CareTypes() {
           {/* Add Custom Care Type */}
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle>Add Custom Care Type</CardTitle>
-                  <CardDescription>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="flex-1 min-w-0">
+                  <CardTitle className="truncate">Add Custom Care Type</CardTitle>
+                  <CardDescription className="hidden sm:block">
                     Create your own care activity types
                   </CardDescription>
                 </div>
                 <Button
                   variant={showAddForm ? "outline" : "default"}
                   onClick={() => setShowAddForm(!showAddForm)}
+                  className="shrink-0 w-full sm:w-auto"
                 >
                   {showAddForm ? "Hide Form" : "Add Custom Type"}
                 </Button>
