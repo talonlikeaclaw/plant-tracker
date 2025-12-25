@@ -36,6 +36,15 @@ import type { Plant, CareType, Species } from "@/types";
 
 export default function AddCarePlan() {
   const navigate = useNavigate();
+
+  // Helper to get today's date in local timezone
+  const getTodayLocal = () => {
+    const today = new Date();
+    return new Date(today.getTime() - today.getTimezoneOffset() * 60000)
+      .toISOString()
+      .split("T")[0];
+  };
+
   const [form, setForm] = useState({
     plant_id: "",
     care_type_id: "",
@@ -120,7 +129,7 @@ export default function AddCarePlan() {
         ...form,
         care_type_id: wateringType.id.toString(),
         frequency_days: suggestedFreq ? suggestedFreq.toString() : "",
-        start_date: new Date().toISOString().split("T")[0],
+        start_date: getTodayLocal(),
         note: `Based on ${plantSpecies.common_name} water requirements`,
       });
     }
@@ -220,18 +229,24 @@ export default function AddCarePlan() {
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="border-b">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-foreground">
-              Create Care Plan
-            </h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              Set up a recurring care schedule for your plants
-            </p>
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex-1 min-w-0">
+              <h1 className="text-xl sm:text-2xl font-bold text-foreground truncate">
+                Create Care Plan
+              </h1>
+              <p className="text-sm text-muted-foreground mt-1 hidden sm:block">
+                Set up a recurring care schedule for your plants
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              onClick={() => navigate("/dashboard")}
+              className="shrink-0 w-full sm:w-auto"
+            >
+              Back to Dashboard
+            </Button>
           </div>
-          <Button variant="outline" onClick={() => navigate("/dashboard")}>
-            Back to Dashboard
-          </Button>
         </div>
       </header>
 
