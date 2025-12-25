@@ -22,3 +22,20 @@ export async function createCarePlan(data: {
   const res = await api.post("/plant-care/care-plans", data);
   return res.data;
 }
+
+export async function updateCarePlan(id: number, data: {
+  plant_id?: number;
+  care_type_id?: number;
+  start_date?: string;
+  frequency_days?: number;
+  note?: string;
+  active?: boolean;
+}) {
+  const res = await api.patch(`/plant-care/care-plans/${id}`, data);
+  return res.data;
+}
+
+export async function deleteCarePlan(id: number) {
+  const res = await api.delete(`/plant-care/care-plans/${id}`);
+  return res.data;
+}
