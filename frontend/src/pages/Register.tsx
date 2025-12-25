@@ -53,7 +53,8 @@ export default function Register() {
         password: form.password,
       });
       localStorage.setItem("token", data.access_token);
-      navigate("/dashboard");
+      // Use window.location to force full page reload and re-evaluate auth state
+      window.location.href = "/dashboard";
     } catch (err: any) {
       console.error(err);
       setError(
@@ -61,13 +62,12 @@ export default function Register() {
           err.response?.data?.message ||
           "Something went wrong. Please try again.",
       );
-    } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex">
+    <div className="min-h-screen flex bg-background text-foreground">
       {/* Theme toggle in top-right */}
       <div className="absolute top-4 right-4">
         <ModeToggle />
@@ -169,8 +169,8 @@ export default function Register() {
       </div>
 
       {/* Right: Image or Content */}
-      <div className="hidden md:flex w-1/2 items-center justify-center bg-emerald-100 dark:bg-emerald-900">
-        <p className="text-2xl font-bold text-primary">
+      <div className="hidden md:flex w-1/2 items-center justify-center bg-primary/10">
+        <p className="text-2xl font-bold text-foreground">
           Welcome to PlantTracker 🌿
         </p>
       </div>

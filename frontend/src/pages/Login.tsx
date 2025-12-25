@@ -33,10 +33,10 @@ export default function Login() {
       // Call API to login user and store JWT token then redirect
       const data = await loginUser({ email, password });
       localStorage.setItem("token", data.access_token);
-      navigate("/dashboard");
+      // Use window.location to force full page reload and re-evaluate auth state
+      window.location.href = "/dashboard";
     } catch (err) {
       setError("Invalid email or password.");
-    } finally {
       setLoading(false);
     }
   };
@@ -118,8 +118,8 @@ export default function Login() {
       </div>
 
       {/* Right: Welcome Message */}
-      <div className="hidden md:flex w-1/2 items-center justify-center bg-emerald-100 dark:bg-emerald-900">
-        <p className="text-2xl font-bold text-primary">
+      <div className="hidden md:flex w-1/2 items-center justify-center bg-primary/10">
+        <p className="text-2xl font-bold text-foreground">
           Welcome to PlantTracker 🌿
         </p>
       </div>
