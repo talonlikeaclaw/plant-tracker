@@ -14,7 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ModeToggle } from "@/components/mode-toggle";
 import { UserMenu } from "@/components/user-menu";
-import { getCurrentUser } from "@/api/users";
+import { getCurrentUser, changePassword } from "@/api/users";
 
 export default function Settings() {
   const navigate = useNavigate();
@@ -65,16 +65,24 @@ export default function Settings() {
       return;
     }
 
+    if (!user?.email) {
+      setError("User email not found. Please refresh the page.");
+      return;
+    }
+
     setLoading(true);
-    // TODO: Implement password change API endpoint
-    // For now, just show a success message
-    setTimeout(() => {
-      setSuccess("Password change functionality coming soon!");
+    try {
+      await changePassword(user.email, currentPassword, newPassword, confirmPassword);
+      setSuccess("Password changed successfully!");
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.error || "Failed to change password";
+      setError(errorMessage);
+    } finally {
       setLoading(false);
-    }, 1000);
+    }
   };
 
   return (
