@@ -296,10 +296,8 @@ def get_upcoming_care_plans(user_id):
 
     try:
         upcoming_logs = plant_care_service.get_upcoming_care_logs(user_id)
-        if not upcoming_logs:
-            return jsonify({"error": "Unable to find any upcoming care plans."}), 404
 
-        return jsonify(upcoming_logs), 200
+        return jsonify({"care_logs": upcoming_logs}), 200
 
     except Exception as e:
         return jsonify({"error": str(e)}), 400

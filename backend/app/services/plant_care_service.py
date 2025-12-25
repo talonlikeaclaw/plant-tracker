@@ -191,25 +191,43 @@ class PlantCareService:
 
         care_plans = self.get_active_care_plans_for_user(user_id)
         for plan in care_plans:
-            delta = (today - plan.start_date).days
-            if delta >= 0:
-                cycles = delta // plan.frequency_days
-                next_due = plan.start_date + timedelta(
-                    days=(cycles + 1) * plan.frequency_days
-                )
-            else:
-                next_due = plan.start_date
-
-            upcoming_logs.append(
-                {
-                    "plant_id": plan.plant_id,
-                    "plant_nickname": plan.plant.nickname,
-                    "care_type": plan.care_type.name,
-                    "note": plan.note,
-                    "due_date": next_due,
-                    "days_until_due": (next_due - today).days,
-                }
+            # Find the most recent care log for this plant + care type
+            most_recent_log = (
+                self.db.query(PlantCare)
+                .filter_by(plant_id=plan.plant_id, care_type_id=plan.care_type_id)
+                .order_by(PlantCare.care_date.desc())
+                .first()
             )
+
+            # Calculate next due date based on most recent log or start date
+            if most_recent_log and most_recent_log.care_date >= plan.start_date:
+                # Use the most recent log date as the base
+                base_date = most_recent_log.care_date
+                next_due = base_date + timedelta(days=plan.frequency_days)
+            else:
+                # No logs yet, use the care plan's start date
+                delta = (today - plan.start_date).days
+                if delta >= 0:
+                    cycles = delta // plan.frequency_days
+                    next_due = plan.start_date + timedelta(
+                        days=cycles * plan.frequency_days
+                    )
+                else:
+                    next_due = plan.start_date
+
+            # Only include care that is due (today or earlier)
+            if next_due <= today:
+                upcoming_logs.append(
+                    {
+                        "plant_id": plan.plant_id,
+                        "plant_nickname": plan.plant.nickname,
+                        "care_type": plan.care_type.name,
+                        "care_type_id": plan.care_type_id,
+                        "note": plan.note,
+                        "due_date": next_due.isoformat(),
+                        "days_until_due": (next_due - today).days,
+                    }
+                )
 
         return sorted(upcoming_logs, key=lambda log: log["due_date"])
 

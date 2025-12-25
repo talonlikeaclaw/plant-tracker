@@ -17,4 +17,6 @@ class CareType(Base):
     plant_care_logs = relationship(
         "PlantCare", back_populates="care_type", cascade="all, delete"
     )
-    care_plans = relationship("CarePlan", back_populates="care_type")
+    care_plans = relationship(
+        "CarePlan", back_populates="care_type", cascade="all, delete"
+    )

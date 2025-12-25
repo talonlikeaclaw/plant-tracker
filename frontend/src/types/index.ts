@@ -28,10 +28,41 @@ export interface CareLog {
   care_date: string;
 }
 
+// Care Plans
+export interface CarePlan {
+  id: number;
+  plant_id: number;
+  care_type_id: number;
+  start_date: string;
+  frequency_days: number;
+  note?: string;
+  active: boolean;
+}
+
 // Care Types
 export interface CareType {
   id: number;
   user_id: number | null;
   name: string;
   description: string;
+}
+
+// Upcoming Care Logs
+export type UpcomingCareLog = {
+  plant_id: number;
+  plant_nickname: string;
+  care_type: string;
+  care_type_id: number;
+  note?: string;
+  due_date: string;
+  days_until_due: number;
+};
+
+// Species
+export interface Species {
+  id: number;
+  common_name: string;
+  scientific_name?: string;
+  sunlight?: string;
+  water_requirements?: string;
 }
