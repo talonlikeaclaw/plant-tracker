@@ -15,9 +15,11 @@ services:
     build:
       context: .
       dockerfile: frontend/Dockerfile
+      args:
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:5000}
     container_name: planttracker-frontend
     ports:
-      - "3000:80"
+      - "3001:80"
     depends_on:
       - backend
 
