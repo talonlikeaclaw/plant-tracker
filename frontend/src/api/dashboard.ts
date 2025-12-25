@@ -25,5 +25,11 @@ export async function getPastCareLogs(): Promise<CareLog[]> {
   );
   const careLogsPerPlant = await Promise.all(careLogPromises);
   const allCareLogs = careLogsPerPlant.flatMap((res) => res.data.care_logs);
-  return allCareLogs;
+
+  // Sort by date (most recent first)
+  return allCareLogs.sort((a, b) => {
+    const dateA = new Date(a.care_date);
+    const dateB = new Date(b.care_date);
+    return dateB.getTime() - dateA.getTime();
+  });
 }
