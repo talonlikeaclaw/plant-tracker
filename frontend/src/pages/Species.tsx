@@ -42,18 +42,24 @@ export default function Species() {
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="border-b">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-foreground">
-              Plant Species
-            </h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              Browse and add plant species to the community database
-            </p>
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex-1 min-w-0">
+              <h1 className="text-xl sm:text-2xl font-bold text-foreground truncate">
+                Plant Species
+              </h1>
+              <p className="text-sm text-muted-foreground mt-1 hidden sm:block">
+                Browse and add plant species to the community database
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              onClick={() => navigate("/dashboard")}
+              className="shrink-0 w-full sm:w-auto"
+            >
+              Back to Dashboard
+            </Button>
           </div>
-          <Button variant="outline" onClick={() => navigate("/dashboard")}>
-            Back to Dashboard
-          </Button>
         </div>
       </header>
 
@@ -63,16 +69,17 @@ export default function Species() {
           {/* Add Species Section */}
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle>Add New Species</CardTitle>
-                  <CardDescription>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="flex-1 min-w-0">
+                  <CardTitle className="truncate">Add New Species</CardTitle>
+                  <CardDescription className="hidden sm:block">
                     Contribute to the community database
                   </CardDescription>
                 </div>
                 <Button
                   variant={showForm ? "outline" : "default"}
                   onClick={() => setShowForm(!showForm)}
+                  className="shrink-0 w-full sm:w-auto"
                 >
                   {showForm ? "Hide Form" : "Add Species"}
                 </Button>

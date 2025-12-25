@@ -26,6 +26,7 @@ import { getDefaultCareTypes, getUserCareTypes } from "@/api/careTypes";
 import { getPastCareLogs } from "@/api/dashboard";
 import type { Plant, CareType, CareLog } from "@/types";
 import { format } from "date-fns";
+import { parseLocalDate } from "@/lib/utils";
 
 export default function LogCare() {
   const navigate = useNavigate();
@@ -33,11 +34,19 @@ export default function LogCare() {
   const [careTypes, setCareTypes] = useState<CareType[]>([]);
   const [recentLogs, setRecentLogs] = useState<CareLog[]>([]);
 
+  // Helper to get today's date in local timezone
+  const getTodayLocal = () => {
+    const today = new Date();
+    return new Date(today.getTime() - today.getTimezoneOffset() * 60000)
+      .toISOString()
+      .split("T")[0];
+  };
+
   // Single plant logging
   const [singleForm, setSingleForm] = useState({
     plant_id: "",
     care_type_id: "",
-    care_date: new Date().toISOString().split("T")[0],
+    care_date: getTodayLocal(),
     note: "",
   });
 
@@ -105,7 +114,7 @@ export default function LogCare() {
       setSingleForm({
         plant_id: "",
         care_type_id: "",
-        care_date: new Date().toISOString().split("T")[0],
+        care_date: getTodayLocal(),
         note: "",
       });
 
@@ -134,7 +143,7 @@ export default function LogCare() {
 
     setLoading(true);
     try {
-      const careDate = new Date().toISOString().split("T")[0];
+      const careDate = getTodayLocal();
 
       // Log care for each selected plant
       await Promise.all(
@@ -191,16 +200,24 @@ export default function LogCare() {
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="border-b">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-foreground">Log Care</h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              Record care activities for your plants
-            </p>
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex-1 min-w-0">
+              <h1 className="text-xl sm:text-2xl font-bold text-foreground truncate">
+                Log Care
+              </h1>
+              <p className="text-sm text-muted-foreground mt-1 hidden sm:block">
+                Record care activities for your plants
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              onClick={() => navigate("/dashboard")}
+              className="shrink-0 w-full sm:w-auto"
+            >
+              Back to Dashboard
+            </Button>
           </div>
-          <Button variant="outline" onClick={() => navigate("/dashboard")}>
-            Back to Dashboard
-          </Button>
         </div>
       </header>
 
@@ -471,7 +488,7 @@ export default function LogCare() {
                           <p className="text-sm text-muted-foreground">
                             {getCareTypeName(log.care_type_id)}
                             {log.care_date &&
-                              ` • ${format(new Date(log.care_date), "PPP")}`}
+                              ` • ${format(parseLocalDate(log.care_date), "PPP")}`}
                           </p>
                           {log.note && (
                             <p className="text-sm text-muted-foreground italic mt-1">

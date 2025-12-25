@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ModeToggle } from "@/components/mode-toggle";
+import { UserMenu } from "@/components/user-menu";
 import {
   Dialog,
   DialogContent,
@@ -26,6 +27,7 @@ import {
 } from "@/api/dashboard";
 import { createCareLog } from "@/api/careLogs";
 import type { Plant, CareLog, UpcomingCareLog } from "@/types";
+import { parseLocalDate } from "@/lib/utils";
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -74,11 +76,16 @@ export default function Dashboard() {
     setSuccess("");
 
     try {
-      // Create the care log with today's date
+      // Create the care log with today's date (in local timezone)
+      const today = new Date();
+      const localDate = new Date(today.getTime() - today.getTimezoneOffset() * 60000)
+        .toISOString()
+        .split("T")[0];
+
       await createCareLog({
         plant_id: logToComplete.plant_id,
         care_type_id: logToComplete.care_type_id,
-        care_date: new Date().toISOString().split("T")[0],
+        care_date: localDate,
         note: logToComplete.note || undefined,
       });
 
@@ -104,16 +111,21 @@ export default function Dashboard() {
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="border-b">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-foreground">
-              Plant Tracker
-            </h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              Welcome back! Here's what's happening with your plants.
-            </p>
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex-1 min-w-0">
+              <h1 className="text-2xl sm:text-3xl font-bold text-foreground truncate">
+                Plant Tracker
+              </h1>
+              <p className="text-sm text-muted-foreground mt-1 hidden sm:block">
+                Welcome back! Here's what's happening with your plants.
+              </p>
+            </div>
+            <div className="flex gap-2 shrink-0">
+              <ModeToggle />
+              <UserMenu />
+            </div>
           </div>
-          <ModeToggle />
         </div>
       </header>
 
@@ -216,7 +228,7 @@ export default function Dashboard() {
                           {log.care_type} &middot; Due{" "}
                           {isNaN(new Date(log.due_date).getTime())
                             ? "Invalid date"
-                            : format(new Date(log.due_date), "PPP")}
+                            : format(parseLocalDate(log.due_date), "PPP")}
                         </CardDescription>
                       </div>
                       <Button
@@ -331,7 +343,7 @@ export default function Dashboard() {
                 </div>
                 <div className="text-sm">
                   <span className="font-medium">Due Date:</span>{" "}
-                  {format(new Date(logToComplete.due_date), "PPP")}
+                  {format(parseLocalDate(logToComplete.due_date), "PPP")}
                 </div>
                 {logToComplete.note && (
                   <div className="text-sm">

@@ -31,6 +31,7 @@ import { getAllPlants, updatePlant, deletePlant } from "@/api/plants";
 import { getAllSpecies } from "@/api/species";
 import type { Plant, Species } from "@/types";
 import { format } from "date-fns";
+import { parseLocalDate } from "@/lib/utils";
 
 export default function ViewPlants() {
   const navigate = useNavigate();
@@ -156,21 +157,32 @@ export default function ViewPlants() {
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="border-b">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-foreground">My Plants</h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              View and manage your plant collection
-            </p>
-          </div>
-          <div className="flex gap-2">
-            <Button onClick={() => navigate("/plants/add")}>
-              <PlusCircleIcon className="h-4 w-4 mr-2" />
-              Add Plant
-            </Button>
-            <Button variant="outline" onClick={() => navigate("/dashboard")}>
-              Back to Dashboard
-            </Button>
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex-1 min-w-0">
+              <h1 className="text-xl sm:text-2xl font-bold text-foreground truncate">
+                My Plants
+              </h1>
+              <p className="text-sm text-muted-foreground mt-1 hidden sm:block">
+                View and manage your plant collection
+              </p>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-2 shrink-0">
+              <Button
+                onClick={() => navigate("/plants/add")}
+                className="w-full sm:w-auto"
+              >
+                <PlusCircleIcon className="h-4 w-4 mr-2" />
+                Add Plant
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => navigate("/dashboard")}
+                className="w-full sm:w-auto"
+              >
+                Back to Dashboard
+              </Button>
+            </div>
           </div>
         </div>
       </header>
@@ -390,13 +402,13 @@ export default function ViewPlants() {
                       {plant.date_added && (
                         <div className="text-sm">
                           <span className="font-medium">Added:</span>{" "}
-                          {format(new Date(plant.date_added), "PPP")}
+                          {format(parseLocalDate(plant.date_added), "PPP")}
                         </div>
                       )}
                       {plant.last_watered && (
                         <div className="text-sm">
                           <span className="font-medium">Last watered:</span>{" "}
-                          {format(new Date(plant.last_watered), "PPP")}
+                          {format(parseLocalDate(plant.last_watered), "PPP")}
                         </div>
                       )}
                     </CardContent>
