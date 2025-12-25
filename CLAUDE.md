@@ -108,7 +108,9 @@ PlantTracker/
 **Directory Layout:**
 - `src/api/` - HTTP client layer (axios instance + endpoint modules)
   - `axios.ts` - Axios instance with JWT interceptor and 401 response handler
-  - `auth.ts`, `users.ts`, `dashboard.ts`, `plants.ts`, `species.ts`, `careLogs.ts`, `carePlans.ts`, `careTypes.ts` - API endpoint functions
+  - `auth.ts` - Login and registration endpoints
+  - `users.ts` - Get current user, change password
+  - `dashboard.ts`, `plants.ts`, `species.ts`, `careLogs.ts`, `carePlans.ts`, `careTypes.ts` - API endpoint functions
 - `src/pages/` - Route components
   - Authentication: `Login.tsx`, `Register.tsx`
   - Dashboard: `Dashboard.tsx`
@@ -294,7 +296,11 @@ VITE_API_URL=<backend_url>  # Frontend - points to /api
 - Protected routes with automatic redirect to login
 - Axios response interceptor for automatic logout on 401 (expired/invalid token)
 - User menu dropdown with logout and settings access
-- Settings page (`/settings`) for viewing account info and changing password (password change coming soon)
+- Settings page (`/settings`) with account info display and password change functionality
+  - View username and email
+  - Change password with current password verification
+  - Client-side validation (6+ character minimum, passwords match)
+  - Backend authentication and secure password update
 
 ### Current State
 - Active branch: `feature/react-frontend`
