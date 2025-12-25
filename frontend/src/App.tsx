@@ -8,6 +8,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import Dashboard from "@/pages/Dashboard";
 import Login from "@/pages/Login";
 import Register from "@/pages/Register";
+import Settings from "@/pages/Settings";
 import AddPlant from "@/pages/AddPlant";
 import ViewPlants from "@/pages/ViewPlants";
 import Species from "@/pages/Species";
@@ -34,6 +35,10 @@ function App() {
           <Route
             path="/dashboard"
             element={isLoggedIn ? <Dashboard /> : <Navigate to="/login" />}
+          />
+          <Route
+            path="/settings"
+            element={isLoggedIn ? <Settings /> : <Navigate to="/login" />}
           />
           <Route
             path="/plants"
