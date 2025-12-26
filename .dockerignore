@@ -1,0 +1,39 @@
+# Node modules
+node_modules
+npm-debug.log
+
+# Build outputs
+dist
+build
+.vite
+
+# Environment files
+.env.local
+.env.*.local
+
+# IDE
+.vscode
+.idea
+
+# Git
+.git
+.gitignore
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Frontend specific
+frontend/node_modules
+frontend/dist
+frontend/.vite
+
+# Backend specific
+backend/__pycache__
+backend/*.pyc
+backend/.pytest_cache
+backend/venv
+backend/.venv
+
+# IMPORTANT: Include frontend/src/lib (negates root .gitignore's lib/ ignore)
+!frontend/src/lib/
