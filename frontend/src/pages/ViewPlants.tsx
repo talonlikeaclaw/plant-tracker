@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { PencilIcon, Trash2Icon, AlertCircleIcon, PlusCircleIcon } from "lucide-react";
+import { PencilIcon, Trash2Icon, AlertCircleIcon, PlusCircleIcon, ClockIcon, HistoryIcon, MapPinIcon, CalendarIcon } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -27,15 +27,19 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { getAllPlants, updatePlant, deletePlant } from "@/api/plants";
 import { getAllSpecies } from "@/api/species";
-import type { Plant, Species } from "@/types";
+import { getCareLogsByPlant } from "@/api/careLogs";
+import { getUpcomingCareLogs } from "@/api/dashboard";
+import { getDefaultCareTypes, getUserCareTypes } from "@/api/careTypes";
+import type { Plant, Species, PlantWithCareData, CareType, UpcomingCareLog, CareLog } from "@/types";
 import { format } from "date-fns";
 import { parseLocalDate } from "@/lib/utils";
 
 export default function ViewPlants() {
   const navigate = useNavigate();
-  const [plants, setPlants] = useState<Plant[]>([]);
+  const [enrichedPlants, setEnrichedPlants] = useState<PlantWithCareData[]>([]);
   const [species, setSpecies] = useState<Species[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [editingPlant, setEditingPlant] = useState<Plant | null>(null);
@@ -56,13 +60,84 @@ export default function ViewPlants() {
 
   const loadData = async () => {
     try {
-      const [plantsRes, speciesRes] = await Promise.all([
+      // Fetch all basic data
+      const [plantsRes, speciesRes, defaultCareTypesRes, userCareTypesRes] = await Promise.all([
         getAllPlants(),
         getAllSpecies(),
+        getDefaultCareTypes(),
+        getUserCareTypes(),
       ]);
 
-      setPlants(plantsRes.plants ?? []);
+      const plantsData = plantsRes.plants ?? [];
+      const allCareTypes = [
+        ...(defaultCareTypesRes.care_types ?? []),
+        ...(userCareTypesRes.care_types ?? []),
+      ];
+
       setSpecies(speciesRes.species ?? []);
+
+      // Fetch care data for all plants
+      const [upcomingCareData, ...careLogsData] = await Promise.all([
+        getUpcomingCareLogs(),
+        ...plantsData.map((plant: Plant) => getCareLogsByPlant(plant.id)),
+      ]);
+
+      // Enrich each plant with care data
+      const enriched: PlantWithCareData[] = plantsData.map((plant: Plant, index: number) => {
+        const careLogs = careLogsData[index].care_logs ?? [];
+        const upcomingCare = upcomingCareData.filter((care: UpcomingCareLog) => care.plant_id === plant.id);
+
+        // Calculate urgency status
+        let urgencyStatus: "overdue" | "due_today" | "due_soon" | "up_to_date" = "up_to_date";
+        if (upcomingCare.length > 0) {
+          const mostUrgent = upcomingCare.reduce((prev: UpcomingCareLog, curr: UpcomingCareLog) =>
+            curr.days_until_due < prev.days_until_due ? curr : prev
+          );
+
+          if (mostUrgent.days_until_due < 0) {
+            urgencyStatus = "overdue";
+          } else if (mostUrgent.days_until_due === 0) {
+            urgencyStatus = "due_today";
+          } else if (mostUrgent.days_until_due <= 3) {
+            urgencyStatus = "due_soon";
+          }
+        }
+
+        // Group care logs by care type and get most recent for each
+        const careTypeMap = new Map<number, CareLog>();
+        careLogs.forEach((log: CareLog) => {
+          const existing = careTypeMap.get(log.care_type_id);
+          if (!existing || new Date(log.care_date) > new Date(existing.care_date)) {
+            careTypeMap.set(log.care_type_id, log);
+          }
+        });
+
+        // Create care history summary
+        const recentCareHistory = Array.from(careTypeMap.values())
+          .map((log: CareLog) => {
+            const careType = allCareTypes.find((ct: CareType) => ct.id === log.care_type_id);
+            const careDate = new Date(log.care_date);
+            const now = new Date();
+            const daysAgo = Math.floor((now.getTime() - careDate.getTime()) / (1000 * 60 * 60 * 24));
+
+            return {
+              careTypeName: careType?.name || "Unknown",
+              lastCareDate: log.care_date,
+              daysAgo,
+            };
+          })
+          .sort((a, b) => a.daysAgo - b.daysAgo)
+          .slice(0, 5); // Show only top 5 most recent care types
+
+        return {
+          ...plant,
+          recentCareHistory,
+          upcomingCare,
+          urgencyStatus,
+        };
+      });
+
+      setEnrichedPlants(enriched);
     } catch (err) {
       console.error("Failed to load data:", err);
       setError("Failed to load plants");
