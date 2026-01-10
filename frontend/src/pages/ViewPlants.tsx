@@ -283,7 +283,7 @@ export default function ViewPlants() {
           {/* Plants Grid */}
           <div>
             <h2 className="text-xl font-semibold mb-4">
-              All Plants ({plants.length})
+              All Plants ({enrichedPlants.length})
             </h2>
             {isLoading ? (
               <Card>
@@ -293,7 +293,7 @@ export default function ViewPlants() {
                   </p>
                 </CardContent>
               </Card>
-            ) : plants.length === 0 ? (
+            ) : enrichedPlants.length === 0 ? (
               <Card>
                 <CardContent>
                   <div className="py-8 text-center space-y-3">
@@ -309,19 +309,33 @@ export default function ViewPlants() {
               </Card>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {plants.map((plant) => (
+                {enrichedPlants.map((plant) => (
                   <Card key={plant.id}>
                     <CardHeader>
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <CardTitle className="text-lg">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex-1 min-w-0">
+                          <CardTitle className="text-lg mb-1 truncate">
                             {plant.nickname}
                           </CardTitle>
-                          <CardDescription>
+                          <CardDescription className="mb-2">
                             {getSpeciesName(plant.species_id)}
                           </CardDescription>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            {plant.urgencyStatus === "overdue" && (
+                              <Badge variant="destructive">Overdue</Badge>
+                            )}
+                            {plant.urgencyStatus === "due_today" && (
+                              <Badge variant="warning">Due Today</Badge>
+                            )}
+                            {plant.urgencyStatus === "due_soon" && (
+                              <Badge variant="success">Due Soon</Badge>
+                            )}
+                            {plant.urgencyStatus === "up_to_date" && plant.recentCareHistory.length > 0 && (
+                              <Badge variant="secondary">All Set</Badge>
+                            )}
+                          </div>
                         </div>
-                        <div className="flex gap-1">
+                        <div className="flex gap-1 shrink-0">
                           {/* Edit Dialog */}
                           <Dialog
                             open={editingPlant?.id === plant.id}
@@ -467,23 +481,109 @@ export default function ViewPlants() {
                         </div>
                       </div>
                     </CardHeader>
-                    <CardContent className="space-y-2">
-                      {plant.location && (
-                        <div className="text-sm">
-                          <span className="font-medium">Location:</span>{" "}
-                          {plant.location}
+                    <CardContent className="space-y-3">
+                      {/* Location & Date Info */}
+                      {(plant.location || plant.date_added) && (
+                        <div className="rounded-lg bg-muted/20 p-3 space-y-2">
+                          {plant.location && (
+                            <div className="flex items-center gap-2 text-sm">
+                              <MapPinIcon className="h-4 w-4 text-muted-foreground shrink-0" />
+                              <span className="text-foreground">{plant.location}</span>
+                            </div>
+                          )}
+                          {plant.date_added && (
+                            <div className="flex items-center gap-2 text-sm">
+                              <CalendarIcon className="h-4 w-4 text-muted-foreground shrink-0" />
+                              <span className="text-muted-foreground">
+                                Added {format(parseLocalDate(plant.date_added), "PP")}
+                              </span>
+                            </div>
+                          )}
                         </div>
                       )}
-                      {plant.date_added && (
-                        <div className="text-sm">
-                          <span className="font-medium">Added:</span>{" "}
-                          {format(parseLocalDate(plant.date_added), "PPP")}
+
+                      {/* Recent Care History */}
+                      {plant.recentCareHistory.length > 0 && (
+                        <div className="rounded-lg bg-muted/30 p-3 space-y-2">
+                          <div className="flex items-center gap-1.5 text-sm font-medium">
+                            <HistoryIcon className="h-4 w-4 text-muted-foreground" />
+                            <span>Recent Care</span>
+                          </div>
+                          <div className="space-y-1.5">
+                            {plant.recentCareHistory.map((care, idx) => (
+                              <div key={idx} className="flex items-baseline gap-1.5 text-sm">
+                                <div className="h-1.5 w-1.5 rounded-full bg-primary/60 shrink-0 mt-1.5" />
+                                <div>
+                                  <span className="font-medium text-foreground">{care.careTypeName}</span>
+                                  <span className="text-muted-foreground">
+                                    {" "}· {care.daysAgo === 0
+                                      ? "today"
+                                      : care.daysAgo === 1
+                                      ? "yesterday"
+                                      : `${care.daysAgo}d ago`}
+                                  </span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
                         </div>
                       )}
-                      {plant.last_watered && (
-                        <div className="text-sm">
-                          <span className="font-medium">Last watered:</span>{" "}
-                          {format(parseLocalDate(plant.last_watered), "PPP")}
+
+                      {/* Upcoming Care */}
+                      {plant.upcomingCare.length > 0 && (
+                        <div className="rounded-lg border-2 border-primary/20 bg-primary/5 p-3 space-y-2">
+                          <div className="flex items-center gap-1.5 text-sm font-medium">
+                            <ClockIcon className="h-4 w-4 text-primary" />
+                            <span>Upcoming Care</span>
+                          </div>
+                          <div className="space-y-1.5">
+                            {plant.upcomingCare.slice(0, 3).map((care, idx) => {
+                              const isPending = care.days_until_due > 7;
+                              return (
+                                <div key={idx} className="flex items-baseline gap-1.5 text-sm">
+                                  <div className={`h-1.5 w-1.5 rounded-full shrink-0 mt-1.5 ${
+                                    care.days_until_due < 0
+                                      ? "bg-destructive"
+                                      : care.days_until_due === 0
+                                      ? "bg-yellow-500"
+                                      : isPending
+                                      ? "bg-muted-foreground/40"
+                                      : "bg-green-500"
+                                  }`} />
+                                  <div>
+                                    <span className="font-medium text-foreground">{care.care_type}</span>
+                                    <span className={`${
+                                      care.days_until_due < 0
+                                        ? "text-destructive"
+                                        : care.days_until_due === 0
+                                        ? "text-yellow-600 dark:text-yellow-500"
+                                        : isPending
+                                        ? "text-muted-foreground/70"
+                                        : "text-muted-foreground"
+                                    }`}>
+                                      {" "}· {care.days_until_due < 0
+                                        ? `${Math.abs(care.days_until_due)}d overdue`
+                                        : care.days_until_due === 0
+                                        ? "due today"
+                                        : `in ${care.days_until_due}d`}
+                                    </span>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* No care data message */}
+                      {plant.recentCareHistory.length === 0 && plant.upcomingCare.length === 0 && (
+                        <div className="rounded-lg border-2 border-dashed border-muted-foreground/20 p-4 text-center">
+                          <p className="text-sm text-muted-foreground">
+                            No care logs or plans yet
+                          </p>
+                          <p className="text-xs text-muted-foreground/70 mt-1">
+                            Add a care plan to get started
+                          </p>
                         </div>
                       )}
                     </CardContent>
