@@ -586,6 +586,26 @@ export default function ViewPlants() {
                           </p>
                         </div>
                       )}
+
+                      {/* Quick Actions */}
+                      <div className="pt-3 border-t flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="flex-1"
+                          onClick={() => navigate(`/log-care?plant=${plant.id}`)}
+                        >
+                          Log Care
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="flex-1"
+                          onClick={() => navigate(`/care-plans/add?plant=${plant.id}`)}
+                        >
+                          Add Plan
+                        </Button>
+                      </div>
                     </CardContent>
                   </Card>
                 ))}
