@@ -66,3 +66,16 @@ export interface Species {
   sunlight?: string;
   water_requirements?: string;
 }
+
+// Plant with enriched care data
+export interface PlantCareStatus {
+  careTypeName: string;
+  lastCareDate: string;
+  daysAgo: number;
+}
+
+export interface PlantWithCareData extends Plant {
+  recentCareHistory: PlantCareStatus[];
+  upcomingCare: UpcomingCareLog[];
+  urgencyStatus: "overdue" | "due_today" | "due_soon" | "up_to_date";
+}

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { AlertCircleIcon, CheckCircle2Icon } from "lucide-react";
 import {
   Card,
@@ -30,6 +30,7 @@ import { parseLocalDate } from "@/lib/utils";
 
 export default function LogCare() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [plants, setPlants] = useState<Plant[]>([]);
   const [careTypes, setCareTypes] = useState<CareType[]>([]);
   const [recentLogs, setRecentLogs] = useState<CareLog[]>([]);
@@ -86,6 +87,14 @@ export default function LogCare() {
   useEffect(() => {
     loadData();
   }, []);
+
+  // Pre-select plant from URL query parameter once plants are loaded
+  useEffect(() => {
+    const plantId = searchParams.get("plant");
+    if (plantId && plants.length > 0 && !singleForm.plant_id) {
+      setSingleForm((prev) => ({ ...prev, plant_id: plantId }));
+    }
+  }, [plants, searchParams, singleForm.plant_id]);
 
   const handleSingleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
