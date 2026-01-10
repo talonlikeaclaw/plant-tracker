@@ -197,57 +197,59 @@ export default function Dashboard() {
 
         {/* Upcoming Care */}
         <section>
-          <h2 className="text-2xl font-semibold mb-4">Upcoming Care</h2>
+          <h2 className="text-2xl font-semibold mb-4">Upcoming Care (Next 3 Days)</h2>
           {isLoading ? (
             <Card>
               <CardContent>
                 <p className="text-muted-foreground">Loading care schedule...</p>
               </CardContent>
             </Card>
-          ) : upcomingLogs.length === 0 ? (
+          ) : upcomingLogs.filter((log) => log.days_until_due <= 3).length === 0 ? (
             <Card>
               <CardContent>
                 <p className="text-muted-foreground">
-                  No upcoming care tasks. Your plants are all set!
+                  No upcoming care tasks in the next 3 days. Your plants are all set!
                 </p>
               </CardContent>
             </Card>
           ) : (
             <div className="space-y-3">
-              {upcomingLogs.map((log) => (
-                <Card
-                  key={`${log.plant_id}-${log.care_type}-${log.due_date}`}
-                >
-                  <CardHeader>
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex-1">
-                        <CardTitle className="text-lg">
-                          {log.plant_nickname}
-                        </CardTitle>
-                        <CardDescription>
-                          {log.care_type} &middot; Due{" "}
-                          {isNaN(new Date(log.due_date).getTime())
-                            ? "Invalid date"
-                            : format(parseLocalDate(log.due_date), "PPP")}
-                        </CardDescription>
+              {upcomingLogs
+                .filter((log) => log.days_until_due <= 3)
+                .map((log) => (
+                  <Card
+                    key={`${log.plant_id}-${log.care_type}-${log.due_date}`}
+                  >
+                    <CardHeader>
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1">
+                          <CardTitle className="text-lg">
+                            {log.plant_nickname}
+                          </CardTitle>
+                          <CardDescription>
+                            {log.care_type} &middot; Due{" "}
+                            {isNaN(new Date(log.due_date).getTime())
+                              ? "Invalid date"
+                              : format(parseLocalDate(log.due_date), "PPP")}
+                          </CardDescription>
+                        </div>
+                        <Button
+                          size="sm"
+                          onClick={() => openConfirmDialog(log)}
+                        >
+                          Mark Done
+                        </Button>
                       </div>
-                      <Button
-                        size="sm"
-                        onClick={() => openConfirmDialog(log)}
-                      >
-                        Mark Done
-                      </Button>
-                    </div>
-                  </CardHeader>
-                  {log.note && (
-                    <CardContent>
-                      <p className="text-sm text-muted-foreground italic">
-                        Note: {log.note}
-                      </p>
-                    </CardContent>
-                  )}
-                </Card>
-              ))}
+                    </CardHeader>
+                    {log.note && (
+                      <CardContent>
+                        <p className="text-sm text-muted-foreground italic">
+                          Note: {log.note}
+                        </p>
+                      </CardContent>
+                    )}
+                  </Card>
+                ))}
             </div>
           )}
         </section>

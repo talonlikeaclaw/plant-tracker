@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { AlertCircleIcon, CheckCircle2Icon, PlusCircleIcon } from "lucide-react";
 import {
   Card,
@@ -36,6 +36,7 @@ import type { Plant, CareType, Species } from "@/types";
 
 export default function AddCarePlan() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   // Helper to get today's date in local timezone
   const getTodayLocal = () => {
@@ -144,6 +145,18 @@ export default function AddCarePlan() {
   useEffect(() => {
     loadData();
   }, []);
+
+  // Pre-select plant from URL query parameter once plants are loaded
+  useEffect(() => {
+    const plantId = searchParams.get("plant");
+    if (plantId && plants.length > 0 && !form.plant_id) {
+      const plant = plants.find((p) => p.id.toString() === plantId);
+      if (plant) {
+        setForm((prev) => ({ ...prev, plant_id: plantId }));
+        setSelectedPlant(plant);
+      }
+    }
+  }, [plants, searchParams, form.plant_id]);
 
   const handleAddCareType = async () => {
     if (!newCareTypeName) {
