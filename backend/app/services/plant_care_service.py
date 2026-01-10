@@ -215,8 +215,9 @@ class PlantCareService:
                 else:
                     next_due = plan.start_date
 
-            # Only include care that is due (today or earlier)
-            if next_due <= today:
+            # Include care that is overdue, due soon, or upcoming within 30 days
+            days_until_due = (next_due - today).days
+            if days_until_due <= 30:
                 upcoming_logs.append(
                     {
                         "plant_id": plan.plant_id,
@@ -225,7 +226,7 @@ class PlantCareService:
                         "care_type_id": plan.care_type_id,
                         "note": plan.note,
                         "due_date": next_due.isoformat(),
-                        "days_until_due": (next_due - today).days,
+                        "days_until_due": days_until_due,
                     }
                 )
 
