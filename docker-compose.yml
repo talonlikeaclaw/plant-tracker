@@ -8,6 +8,7 @@ services:
       - "5000:5000"
     env_file:
       - .env
+    restart: unless-stopped
     # depends_on:
     #   - db
 
@@ -20,6 +21,7 @@ services:
     container_name: planttracker-frontend
     ports:
       - "3001:80"
+    restart: unless-stopped
     depends_on:
       - backend
 
