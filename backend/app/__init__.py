@@ -13,7 +13,7 @@ def create_app():
     CORS(
         app,
         supports_credentials=True,
-        origins=["http://localhost:5173", "http://localhost:3000"],
+        origins=["http://localhost:5173", "http://localhost:3000", "https://plants.talonlikeaclaw.com"],
         allow_headers=["Content-Type", "Authorization"],
         methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"]
     )
