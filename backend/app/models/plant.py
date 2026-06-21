@@ -20,3 +20,9 @@ class Plant(Base):
     species = relationship("Species", back_populates="plants")
     care_logs = relationship("PlantCare", back_populates="plant", cascade="all, delete")
     care_plans = relationship("CarePlan", back_populates="plant", cascade="all, delete")
+    photos = relationship(
+        "Photo",
+        back_populates="plant",
+        cascade="all, delete",
+        passive_deletes=True,
+    )
