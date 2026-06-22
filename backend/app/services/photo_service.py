@@ -38,6 +38,50 @@ class PhotoService:
         self.db = db
         self.upload_folder = current_app.config["UPLOAD_FOLDER"]
 
+    # --- UPLOAD ---
+
+    def upload_plant_photo(self, plant_id: int, file_storage: FileStorage) -> Photo:
+        """Validates, processes, saves, and records a photo for a Plant.
+
+        Args:
+            plant_id (int): The owning Plant's ID.
+            file_storage (FileStorage): The uploaded file from `request.files`.
+
+        Returns:
+            Photo: The created Photo object.
+
+        Raises:
+            ValueError: If MIME type is not allowed.
+            IntegrityError: If DB commit fails.
+        """
+        target_dir = os.path.join(self.upload_folder, "plants", str(plant_id))
+        meta = self._process_and_save(file_storage, target_dir)
+        meta["plant_id"] = plant_id
+        meta["position"] = self._next_position(plant_id=plant_id)
+        return self._create_photo_row(meta)
+
+    def upload_care_log_photo(
+        self, care_log_id: int, file_storage: FileStorage
+    ) -> Photo:
+        """Validates, processes, saves, and records a photo for a PlantCare log.
+
+        Args:
+            care_log_id (int): The owning PlantCare log's ID.
+            file_storage (FileStorage): The uploaded file from `request.files`.
+
+        Returns:
+            Photo: The created Photo object.
+
+        Raises:
+            ValueError: If MIME type is not allowed.
+            IntegrityError: If DB commit fails.
+        """
+        target_dir = os.path.join(self.upload_folder, "care-logs", str(care_log_id))
+        meta = self._process_and_save(file_storage, target_dir)
+        meta["care_log_id"] = care_log_id
+        meta["position"] = self._next_position(care_log_id=care_log_id)
+        return self._create_photo_row(meta)
+
     # --- INTERNALS ---
 
     def _process_and_save(self, file_storage: FileStorage, target_dir: str) -> dict:
