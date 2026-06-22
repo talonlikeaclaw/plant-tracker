@@ -82,6 +82,69 @@ class PhotoService:
         meta["position"] = self._next_position(care_log_id=care_log_id)
         return self._create_photo_row(meta)
 
+    # --- READ ---
+
+    def get_photo(self, photo_id: int) -> Optional[Photo]:
+        """Fetches a single Photo by its ID."""
+        return self.db.query(Photo).filter_by(id=photo_id).first()
+
+    def get_plant_photos(self, plant_id: int) -> List[Photo]:
+        """Returns only the photos that belong directly to the Plant
+        (NOT including photos from the plant's care logs), ordered by position.
+        """
+        return (
+            self.db.query(Photo)
+            .filter_by(plant_id=plant_id)
+            .order_by(Photo.position.asc(), Photo.created_at.asc())
+            .all()
+        )
+
+    def get_care_log_photos(self, care_log_id: int) -> List[Photo]:
+        """Returns all photos for a single PlantCare log, ordered by position."""
+        return (
+            self.db.query(Photo)
+            .filter_by(care_log_id=care_log_id)
+            .order_by(Photo.position.asc(), Photo.created_at.asc())
+            .all()
+        )
+
+    def get_aggregated_plant_photos(self, plant_id: int) -> List[dict]:
+        """Returns a unified gallery for a Plant: the Plant's own photos plus
+        every photo attached to any of its care logs.).
+
+        Returns:
+            List[dict]: Photos sorted by creation date (newest first).
+        """
+        results: List[dict] = []
+
+        # Plant's own photos
+        for photo in self.get_plant_photos(plant_id):
+            results.append(self._serialize_photo(photo, source_type="plant"))
+
+        # Photos from each care log, with care metadata for context
+        care_logs = (
+            self.db.query(PlantCare)
+            .filter_by(plant_id=plant_id)
+            .order_by(PlantCare.care_date.desc())
+            .all()
+        )
+        for log in care_logs:
+            for photo in self.get_care_log_photos(log.id):  # type: ignore[arg-type]
+                results.append(
+                    self._serialize_photo(
+                        photo,
+                        source_type="care_log",
+                        care_log_id=log.id,  # type: ignore[arg-type]
+                        care_type=log.care_type.name if log.care_type else None,
+                        care_date=log.care_date.isoformat() if log.care_date else None,  # type: ignore
+                        note=log.note,  # type: ignore[arg-type]
+                    )
+                )
+
+        # Newest first
+        results.sort(key=lambda p: p["created_at"], reverse=True)
+        return results
+
     # --- INTERNALS ---
 
     def _process_and_save(self, file_storage: FileStorage, target_dir: str) -> dict:
