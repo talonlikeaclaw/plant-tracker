@@ -114,3 +114,80 @@ class PhotoService:
             "height": original_height,
         }
 
+    def _create_photo_row(self, meta: dict) -> Photo:
+        """Inserts a Photo row from the metadata dict returned by _process_and_save."""
+        photo = Photo(**meta)
+        self.db.add(photo)
+        try:
+            self.db.commit()
+            self.db.refresh(photo)
+        except IntegrityError:
+            self.db.rollback()
+            raise
+        return photo
+
+    def _next_position(
+        self, plant_id: Optional[int] = None, care_log_id: Optional[int] = None
+    ) -> int:
+        """Returns the next position value for a new photo under the given owner.
+        Position 0 is the cover photo for plants.
+        """
+        q = self.db.query(func.max(Photo.position))
+        if plant_id is not None:
+            q = q.filter(Photo.plant_id == plant_id)
+        elif care_log_id is not None:
+            q = q.filter(Photo.care_log_id == care_log_id)
+        else:
+            return 0
+        current_max = q.scalar()
+        return (current_max or -1) + 1
+
+    @staticmethod
+    def _thumb_name(filename: str) -> str:
+        """Returns the thumbnail variant's filename for a given original filename."""
+        name, _ = os.path.splitext(filename)
+        return f"{name}_thumb{PhotoService.OUTPUT_EXT}"
+
+    def _delete_photo_files(self, photo: Photo) -> None:
+        """Deletes the on-disk original and thumbnail for a photo (best-effort)."""
+        for thumb in (False, True):
+            path = self.file_path_for(photo, thumb=thumb)
+            try:
+                os.remove(path)
+            except FileNotFoundError:
+                pass
+
+    @staticmethod
+    def _serialize_photo(
+        photo: Photo,
+        source_type: str,
+        care_log_id: Optional[int] = None,
+        care_type: Optional[str] = None,
+        care_date: Optional[str] = None,
+        note: Optional[str] = None,
+    ) -> dict:
+        """Serializes a Photo row into a JSON-friendly dict with source metadata."""
+        data = {
+            "id": photo.id,
+            "owner_type": "plant" if photo.plant_id is not None else "care_log",
+            "owner_id": photo.plant_id
+            if photo.plant_id is not None
+            else photo.care_log_id,
+            "filename": photo.filename,
+            "original_filename": photo.original_filename,
+            "width": photo.width,
+            "height": photo.height,
+            "position": photo.position,
+            "created_at": photo.created_at.isoformat() if photo.created_at else None,  # type: ignore
+            "source": {"type": source_type},
+        }
+        if source_type == "care_log":
+            data["source"].update(
+                {
+                    "care_log_id": care_log_id,
+                    "care_type": care_type,
+                    "care_date": care_date,
+                    "note": note,
+                }
+            )
+        return data
