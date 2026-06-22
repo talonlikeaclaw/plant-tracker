@@ -1,4 +1,5 @@
 import os
+
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -20,4 +21,17 @@ class Config:
 
     JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY")
     if JWT_SECRET_KEY is None:
-        raise ValueError("JWT_SECRET_KEY environment variable is not set. This is required for secure JWT operations.")
+        raise ValueError(
+            "JWT_SECRET_KEY environment variable is not set. This is required for secure JWT operations."
+        )
+
+    # Photo uploads
+    UPLOAD_FOLDER = os.getenv("UPLOAD_FOLDER", "/app/uploads")
+    MAX_UPLOAD_SIZE = 10 * 1024 * 1024  # 10 MB
+    ALLOWED_MIME_TYPES = {
+        "image/jpeg",
+        "image/png",
+        "image/webp",
+        "image/heic",
+        "image/heif",
+    }
