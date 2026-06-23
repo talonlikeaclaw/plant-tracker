@@ -14,6 +14,40 @@ from app.services.plant_service import PlantService
 
 photo_bp = Blueprint("photo", __name__)
 
+
+# --- OWNERSHIP HELPERS ---
+
+
+def _verify_plant_ownership(plant_service: PlantService, user_id: int, plant_id: int):
+    """Returns (plant, error_response). On success error_response is None.
+    On failure plant is None and error_response is a (response, status) tuple.
+    """
+    plant = plant_service.get_plant(plant_id)
+    if not plant:
+        return None, (jsonify({"error": "Plant not found"}), 404)
+    if plant.user_id != user_id:  # type: ignore[union-attr]
+        return None, (jsonify({"error": "Unauthorized access to this plant."}), 403)
+    return plant, None
+
+
+def _verify_care_log_ownership(
+    plant_service: PlantService,
+    plant_care_service: PlantCareService,
+    user_id: int,
+    care_log_id: int,
+):
+    """Returns (care_log, error_response). Same semantics as above."""
+    care_log = plant_care_service.get_care_log_by_id(care_log_id)
+    if not care_log:
+        return None, (jsonify({"error": "Care log not found"}), 404)
+    plant = plant_service.get_plant(care_log.plant_id)  # type: ignore[arg-type]
+    if not plant:
+        return None, (jsonify({"error": "Plant not found"}), 404)
+    if plant.user_id != user_id:  # type: ignore[union-attr]
+        return None, (jsonify({"error": "Unauthorized access to this care log."}), 403)
+    return care_log, None
+
+
 # --- HELPERS ---
 
 
