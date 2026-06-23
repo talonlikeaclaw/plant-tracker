@@ -145,6 +145,89 @@ class PhotoService:
         results.sort(key=lambda p: p["created_at"], reverse=True)
         return results
 
+    # --- REORDER / DELETE ---
+
+    def update_position(self, photo_id: int, new_position: int) -> Optional[Photo]:
+        """Updates a photo's position (used for plant cover/reorder).
+
+        Args:
+            photo_id (int): ID of the photo to update.
+            new_position (int): New position value.
+
+        Returns:
+            Photo or None: Updated photo, or None if not found.
+        """
+        photo = self.get_photo(photo_id)
+        if not photo:
+            return None
+        setattr(photo, "position", new_position)
+        try:
+            self.db.commit()
+            self.db.refresh(photo)
+        except IntegrityError:
+            self.db.rollback()
+            raise
+        return photo
+
+    def delete_photo(self, photo_id: int) -> bool:
+        """Deletes a Photo row and its on-disk files (original + thumbnail).
+
+        Args:
+            photo_id (int): ID of the photo to delete.
+
+        Returns:
+            bool: True if deleted, False if not found.
+        """
+        photo = self.get_photo(photo_id)
+        if not photo:
+            return False
+
+        # Remove files first (cheaper than querying after delete)
+        self._delete_photo_files(photo)
+
+        self.db.delete(photo)
+        self.db.commit()
+        return True
+
+    # Disk cleanup on parent delete
+
+    def cleanup_plant_files(self, plant_id: int) -> None:
+        """Removes all on-disk photo files for a Plant AND its care logs.
+
+        MUST be called before the Plant row is deleted, because after the
+        delete the care_log IDs are gone from the DB and their photo
+        directories become orphans on disk.
+
+        Args:
+            plant_id (int): ID of the plant about to be deleted.
+        """
+        # Capture care_log IDs first while they still exist in the DB
+        care_log_ids = [
+            row[0]
+            for row in self.db.query(PlantCare.id).filter_by(plant_id=plant_id).all()
+        ]
+
+        # Plant's own photo directory
+        plant_dir = os.path.join(self.upload_folder, "plants", str(plant_id))
+        if os.path.isdir(plant_dir):
+            shutil.rmtree(plant_dir, ignore_errors=True)
+
+        # Each care log's directory
+        for cl_id in care_log_ids:
+            self.cleanup_care_log_files(cl_id)
+
+    def cleanup_care_log_files(self, care_log_id: int) -> None:
+        """Removes all on-disk photo files for a PlantCare log.
+
+        MUST be called before the PlantCare row is deleted.
+
+        Args:
+            care_log_id (int): ID of the care log about to be deleted.
+        """
+        cl_dir = os.path.join(self.upload_folder, "care-logs", str(care_log_id))
+        if os.path.isdir(cl_dir):
+            shutil.rmtree(cl_dir, ignore_errors=True)
+
     # --- INTERNALS ---
 
     def _process_and_save(self, file_storage: FileStorage, target_dir: str) -> dict:
