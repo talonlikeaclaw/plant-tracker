@@ -228,6 +228,47 @@ class PhotoService:
         if os.path.isdir(cl_dir):
             shutil.rmtree(cl_dir, ignore_errors=True)
 
+    # --- FILE SERVING HELPERS ---
+
+    def directory_for(self, photo: Photo) -> str:
+        """Returns the absolute directory containing the photo's files."""
+        if photo.plant_id is not None:
+            return os.path.join(self.upload_folder, "plants", str(photo.plant_id))
+        if photo.care_log_id is not None:
+            return os.path.join(self.upload_folder, "care-logs", str(photo.care_log_id))
+        raise ValueError(f"Photo {photo.id} has neither plant_id nor care_log_id")
+
+    def file_name_for(self, photo: Photo, thumb: bool = False) -> str:
+        """Returns the on-disk filename for the photo (original or thumbnail)."""
+        filename: str = photo.filename  # type: ignore[assignment]
+        if not thumb:
+            return filename
+        name, _ = os.path.splitext(filename)
+        return f"{name}_thumb{self.OUTPUT_EXT}"
+
+    def file_path_for(self, photo: Photo, thumb: bool = False) -> str:
+        """Returns the absolute path to the photo file on disk."""
+        return os.path.join(
+            self.directory_for(photo), self.file_name_for(photo, thumb=thumb)
+        )
+
+    # --- OWNERSHIP CHECK ---
+
+    def user_owns_photo(self, user_id: int, photo: Photo) -> bool:
+        """Returns True if the given user owns the plant that owns this photo
+        (directly via plant_id, or transitively via care_log_id -> plant).
+        """
+        if photo.plant_id is not None:
+            plant = self.db.query(Plant).filter_by(id=photo.plant_id).first()
+            return plant is not None and plant.user_id == user_id  # type: ignore[return-value]
+        if photo.care_log_id is not None:
+            care_log = self.db.query(PlantCare).filter_by(id=photo.care_log_id).first()
+            if care_log is None:
+                return False
+            plant = self.db.query(Plant).filter_by(id=care_log.plant_id).first()
+            return plant is not None and plant.user_id == user_id  # type: ignore[return-value]
+        return False
+
     # --- INTERNALS ---
 
     def _process_and_save(self, file_storage: FileStorage, target_dir: str) -> dict:
