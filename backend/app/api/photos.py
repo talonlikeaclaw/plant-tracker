@@ -213,6 +213,122 @@ def upload_care_log_photos(user_id, care_log_id):
     finally:
         db.close()
 
+
+# --- SINGLE-PHOTO ENDPOINTS (MUTATE / SERVE / DELETE) ---
+
+
+@photo_bp.route("/<int:photo_id>", methods=["PATCH"])
+@jwt_required()
+@require_user_id
+def update_photo(user_id, photo_id):
+    """Updates a photo's position (used for plant cover/reorder).
+    Body: {"position": <int>}
+    """
+    db = SessionLocal()
+    try:
+        photo_service = PhotoService(db)
+
+        photo = photo_service.get_photo(photo_id)
+        if not photo:
+            return jsonify({"error": "Photo not found"}), 404
+
+        if not photo_service.user_owns_photo(user_id, photo):
+            return jsonify({"error": "Unauthorized access to this photo."}), 403
+
+        data = request.get_json(silent=True) or {}
+        position = data.get("position")
+        if position is None or not isinstance(position, int):
+            return jsonify({"error": "Field 'position' (int) is required."}), 400
+
+        updated = photo_service.update_position(photo_id, position)
+        if not updated:
+            return jsonify({"error": "Photo was not updated."}), 500
+
+        return (
+            jsonify(
+                {
+                    "message": "Photo updated.",
+                    "photo": {
+                        "id": updated.id,
+                        "position": updated.position,
+                    },
+                }
+            ),
+            200,
+        )
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+    finally:
+        db.close()
+
+
+@photo_bp.route("/<int:photo_id>", methods=["DELETE"])
+@jwt_required()
+@require_user_id
+def delete_photo(user_id, photo_id):
+    """Deletes a photo (DB row + on-disk files)."""
+    db = SessionLocal()
+    try:
+        photo_service = PhotoService(db)
+
+        photo = photo_service.get_photo(photo_id)
+        if not photo:
+            return jsonify({"error": "Photo not found"}), 404
+
+        if not photo_service.user_owns_photo(user_id, photo):
+            return jsonify({"error": "Unauthorized access to this photo."}), 403
+
+        deleted = photo_service.delete_photo(photo_id)
+        if not deleted:
+            return jsonify({"error": "Photo was not deleted."}), 500
+
+        return jsonify({"message": "Photo deleted successfully!"}), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+    finally:
+        db.close()
+
+
+@photo_bp.route("/<int:photo_id>/file", methods=["GET"])
+@jwt_required()
+@require_user_id
+def serve_photo_file(user_id, photo_id):
+    """Serves the photo's original file. Pass `?thumb=1` for the thumbnail."""
+    db = SessionLocal()
+    try:
+        photo_service = PhotoService(db)
+
+        photo = photo_service.get_photo(photo_id)
+        if not photo:
+            return jsonify({"error": "Photo not found"}), 404
+
+        if not photo_service.user_owns_photo(user_id, photo):
+            return jsonify({"error": "Unauthorized access to this photo."}), 403
+
+        thumb = request.args.get("thumb") == "1"
+        directory = photo_service.directory_for(photo)
+        filename = photo_service.file_name_for(photo, thumb=thumb)
+
+        if not os.path.isfile(os.path.join(directory, filename)):
+            return jsonify({"error": "File missing on disk."}), 404
+
+        # Cache privately for a long time (filenames are immutable UUIDs)
+        response = send_from_directory(
+            directory,
+            filename,
+            mimetype="image/jpeg",
+        )
+        response.headers.set("Cache-Control", "private, max-age=31536000, immutable")
+        return response
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+    finally:
+        db.close()
+
+
 # --- HELPERS ---
 
 
