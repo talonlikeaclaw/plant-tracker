@@ -3,6 +3,7 @@ from flask_jwt_extended import jwt_required
 from app.decorators.auth import require_user_id
 from app.models.database import SessionLocal
 from app.services.plant_service import PlantService
+from app.services.photo_service import PhotoService
 
 plant_bp = Blueprint("plant", __name__)
 
@@ -14,6 +15,7 @@ def get_plants(user_id):
     """Gets all plants that belong to the user's JWT identity."""
     db = SessionLocal()
     plant_service = PlantService(db)
+    photo_service = PhotoService(db)
 
     try:
         # Get Plants
@@ -22,6 +24,7 @@ def get_plants(user_id):
         # Convert Plants into List or Dictionaries
         plants_list = []
         for plant in plants:
+            cover = photo_service.get_cover_photo(plant.id)  # type: ignore[arg-type]
             plants_list.append(
                 {
                     "id": plant.id,
@@ -32,6 +35,7 @@ def get_plants(user_id):
                     if plant.date_added else None,  # type: ignore
                     "last_watered": plant.last_watered.isoformat()
                     if plant.last_watered else None,  # type: ignore
+                    "cover_photo_id": cover.id if cover else None,
                 }
             )
 
@@ -90,8 +94,8 @@ def create_plant(user_id):
                 "date_added": new_plant.date_added.isoformat()
                 if new_plant.date_added else None,  # type: ignore
                 "last_watered": new_plant.last_watered.isoformat()
-                if new_plant.last_watered else None  # type: ignore
-
+                if new_plant.last_watered else None,  # type: ignore
+                "cover_photo_id": None,
             }
         }), 201
 
@@ -114,6 +118,7 @@ def get_plant(user_id, plant_id):
     """
     db = SessionLocal()
     plant_service = PlantService(db)
+    photo_service = PhotoService(db)
 
     try:
         # Get Plant and validate it
@@ -126,6 +131,8 @@ def get_plant(user_id, plant_id):
             return jsonify({"error":
                             "Unauthorized: Plant does not belong to you"}), 403
 
+        cover = photo_service.get_cover_photo(plant_id)
+
         # Respond
         return jsonify({
             "plant": {
@@ -136,7 +143,8 @@ def get_plant(user_id, plant_id):
                 "date_added": plant.date_added.isoformat()
                 if plant.date_added else None,  # type: ignore
                 "last_watered": plant.last_watered.isoformat()
-                if plant.last_watered else None  # type: ignore
+                if plant.last_watered else None,  # type: ignore
+                "cover_photo_id": cover.id if cover else None,
             }
         }), 200
 
@@ -158,6 +166,7 @@ def update_plant(user_id, plant_id):
     """
     db = SessionLocal()
     plant_service = PlantService(db)
+    photo_service = PhotoService(db)
 
     try:
         # Validate Plant exists and user owns it
@@ -183,6 +192,8 @@ def update_plant(user_id, plant_id):
         if not updated_plant:
             return jsonify({"error": "Updated plant was not found"}), 500
 
+        cover = photo_service.get_cover_photo(plant_id)
+
         # Respond
         return jsonify({
             "message": "Plant updated successfully!",
@@ -194,7 +205,8 @@ def update_plant(user_id, plant_id):
                 "date_added": updated_plant.date_added.isoformat()
                 if updated_plant.date_added else None,  # type: ignore
                 "last_watered": updated_plant.last_watered.isoformat()
-                if updated_plant.last_watered else None  # type: ignore
+                if updated_plant.last_watered else None,  # type: ignore
+                "cover_photo_id": cover.id if cover else None,
             }
         }), 200
 
