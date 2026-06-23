@@ -124,6 +124,95 @@ def upload_plant_photos(user_id, plant_id):
     finally:
         db.close()
 
+
+# --- CARE LOG PHOTO ENDPOINTS ---
+
+
+@photo_bp.route("/care-log/<int:care_log_id>", methods=["GET"])
+@jwt_required()
+@require_user_id
+def get_care_log_photos(user_id, care_log_id):
+    """Returns all photos for a single care log."""
+    db = SessionLocal()
+    try:
+        plant_service = PlantService(db)
+        plant_care_service = PlantCareService(db)
+        photo_service = PhotoService(db)
+
+        care_log, err = _verify_care_log_ownership(
+            plant_service, plant_care_service, user_id, care_log_id
+        )
+        if err:
+            return err
+
+        photos = photo_service.get_care_log_photos(care_log_id)
+        return (
+            jsonify(
+                {
+                    "photos": [
+                        _serialize_with_source(p, source_type="care_log")
+                        for p in photos
+                    ]
+                }
+            ),
+            200,
+        )
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+    finally:
+        db.close()
+
+
+@photo_bp.route("/care-log/<int:care_log_id>", methods=["POST"])
+@jwt_required()
+@require_user_id
+def upload_care_log_photos(user_id, care_log_id):
+    """Uploads one or more photos to a PlantCare log."""
+    db = SessionLocal()
+    try:
+        plant_service = PlantService(db)
+        plant_care_service = PlantCareService(db)
+        photo_service = PhotoService(db)
+
+        care_log, err = _verify_care_log_ownership(
+            plant_service, plant_care_service, user_id, care_log_id
+        )
+        if err:
+            return err
+
+        files = _collect_uploaded_files()
+        if not files:
+            return jsonify(
+                {"error": "No files provided. Use field 'file' or 'files'."}
+            ), 400
+
+        created, errors = [], []
+        for f in files:
+            try:
+                photo = photo_service.upload_care_log_photo(care_log_id, f)
+                created.append(_serialize_created(photo, owner_type="care_log"))
+            except ValueError as ve:
+                errors.append({"filename": f.filename, "error": str(ve)})
+            except Exception as e:
+                errors.append({"filename": f.filename, "error": str(e)})
+
+        return (
+            jsonify(
+                {
+                    "message": f"Uploaded {len(created)} photo(s).",
+                    "photos": created,
+                    "errors": errors,
+                }
+            ),
+            201 if created else 400,
+        )
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+    finally:
+        db.close()
+
 # --- HELPERS ---
 
 
