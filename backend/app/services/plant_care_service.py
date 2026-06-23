@@ -1,8 +1,11 @@
-from app.models import PlantCare, CarePlan
-from sqlalchemy.orm import Session
-from sqlalchemy.exc import IntegrityError
-from typing import Optional, List
 from datetime import date, timedelta
+from typing import List, Optional
+
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import Session
+
+from app.models import CarePlan, PlantCare
+from app.services.photo_service import PhotoService
 
 
 class PlantCareService:
@@ -191,6 +194,8 @@ class PlantCareService:
 
         care_plans = self.get_active_care_plans_for_user(user_id)
         for plan in care_plans:
+            frequency_days: int = plan.frequency_days  # type: ignore[assignment]
+
             # Find the most recent care log for this plant + care type
             most_recent_log = (
                 self.db.query(PlantCare)
@@ -200,18 +205,19 @@ class PlantCareService:
             )
 
             # Calculate next due date based on most recent log or start date
-            if most_recent_log and most_recent_log.care_date >= plan.start_date:
+            if (
+                most_recent_log is not None
+                and most_recent_log.care_date >= plan.start_date
+            ):  # type: ignore
                 # Use the most recent log date as the base
                 base_date = most_recent_log.care_date
-                next_due = base_date + timedelta(days=plan.frequency_days)
+                next_due = base_date + timedelta(days=frequency_days)
             else:
                 # No logs yet, use the care plan's start date
                 delta = (today - plan.start_date).days
                 if delta >= 0:
-                    cycles = delta // plan.frequency_days
-                    next_due = plan.start_date + timedelta(
-                        days=cycles * plan.frequency_days
-                    )
+                    cycles = delta // frequency_days
+                    next_due = plan.start_date + timedelta(days=cycles * frequency_days)
                 else:
                     next_due = plan.start_date
 
@@ -325,6 +331,9 @@ class PlantCareService:
     def delete_care_log(self, care_id: int) -> bool:
         """Deletes a care log from the database.
 
+        Also removes all on-disk photo files for the care log (handled by
+        PhotoService before the DB cascade drops the rows).
+
         Args:
             care_id (int): ID of the care log to delete.
 
@@ -334,6 +343,8 @@ class PlantCareService:
         care_log = self.get_care_log_by_id(care_id)
         if not care_log:
             return False
+
+        PhotoService(self.db).cleanup_care_log_files(care_id)
 
         self.db.delete(care_log)
         self.db.commit()

@@ -1,7 +1,10 @@
-from app.models import Plant
-from sqlalchemy.orm import Session
+from typing import List, Optional
+
 from sqlalchemy.exc import IntegrityError
-from typing import Optional, List
+from sqlalchemy.orm import Session
+
+from app.models import Plant
+from app.services.photo_service import PhotoService
 
 
 class PlantService:
@@ -107,6 +110,9 @@ class PlantService:
     def delete_plant(self, plant_id: int) -> bool:
         """Deletes a plant from the database.
 
+        Also removes all on-disk photo files for the plant AND its care logs
+        (handled by PhotoService before the DB cascade drops the rows).
+
         Args:
             plant_id (int): ID of the plant to delete.
 
@@ -116,6 +122,8 @@ class PlantService:
         plant = self.get_plant(plant_id)
         if not plant:
             return False
+
+        PhotoService(self.db).cleanup_plant_files(plant_id)
 
         self.db.delete(plant)
         self.db.commit()
