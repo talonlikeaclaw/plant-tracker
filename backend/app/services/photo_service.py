@@ -108,6 +108,18 @@ class PhotoService:
             .all()
         )
 
+    def get_cover_photo(self, plant_id: int) -> Optional[Photo]:
+        """Returns the cover photo for a Plant (lowest position value).
+        Used to show a thumbnail on the plants grid. Returns None if the
+        plant has no direct photos.
+        """
+        return (
+            self.db.query(Photo)
+            .filter_by(plant_id=plant_id)
+            .order_by(Photo.position.asc(), Photo.created_at.asc())
+            .first()
+        )
+
     def get_aggregated_plant_photos(self, plant_id: int) -> List[dict]:
         """Returns a unified gallery for a Plant: the Plant's own photos plus
         every photo attached to any of its care logs.).
