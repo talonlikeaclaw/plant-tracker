@@ -17,6 +17,7 @@ export interface Plant {
   date_added: string;
   last_watered: string;
   location?: string;
+  cover_photo_id?: number | null;
 }
 
 // Care Logs
@@ -78,4 +79,31 @@ export interface PlantWithCareData extends Plant {
   recentCareHistory: PlantCareStatus[];
   upcomingCare: UpcomingCareLog[];
   urgencyStatus: "overdue" | "due_today" | "due_soon" | "up_to_date";
+}
+
+// Photos
+export interface Photo {
+  id: number;
+  owner_type: "plant" | "care_log";
+  owner_id: number;
+  filename: string;
+  original_filename?: string;
+  width?: number;
+  height?: number;
+  position?: number;
+  created_at?: string;
+}
+
+// Source metadata describing where a photo came from (plant vs care log)
+export interface PhotoSource {
+  type: "plant" | "care_log";
+  care_log_id?: number;
+  care_type?: string;
+  care_date?: string;
+  note?: string;
+}
+
+// Photo with source info, returned by the aggregated gallery endpoints
+export interface PhotoWithSource extends Photo {
+  source: PhotoSource;
 }
