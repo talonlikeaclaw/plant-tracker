@@ -48,6 +48,82 @@ def _verify_care_log_ownership(
     return care_log, None
 
 
+# --- PLANT PHOTO ENDPOINTS ---
+
+
+@photo_bp.route("/plant/<int:plant_id>", methods=["GET"])
+@jwt_required()
+@require_user_id
+def get_plant_photos(user_id, plant_id):
+    """Returns the aggregated gallery for a Plant: its own photos plus all
+    photos attached to any of its care logs, sorted newest first.
+    """
+    db = SessionLocal()
+    try:
+        plant_service = PlantService(db)
+        photo_service = PhotoService(db)
+
+        plant, err = _verify_plant_ownership(plant_service, user_id, plant_id)
+        if err:
+            return err
+
+        photos = photo_service.get_aggregated_plant_photos(plant_id)
+        return jsonify({"photos": photos}), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+    finally:
+        db.close()
+
+
+@photo_bp.route("/plant/<int:plant_id>", methods=["POST"])
+@jwt_required()
+@require_user_id
+def upload_plant_photos(user_id, plant_id):
+    """Uploads one or more photos to a Plant. Accepts multipart/form-data
+    with field name `file` (single) or `files` (multiple).
+    """
+    db = SessionLocal()
+    try:
+        plant_service = PlantService(db)
+        photo_service = PhotoService(db)
+
+        plant, err = _verify_plant_ownership(plant_service, user_id, plant_id)
+        if err:
+            return err
+
+        files = _collect_uploaded_files()
+        if not files:
+            return jsonify(
+                {"error": "No files provided. Use field 'file' or 'files'."}
+            ), 400
+
+        created, errors = [], []
+        for f in files:
+            try:
+                photo = photo_service.upload_plant_photo(plant_id, f)
+                created.append(_serialize_created(photo, owner_type="plant"))
+            except ValueError as ve:
+                errors.append({"filename": f.filename, "error": str(ve)})
+            except Exception as e:
+                errors.append({"filename": f.filename, "error": str(e)})
+
+        return (
+            jsonify(
+                {
+                    "message": f"Uploaded {len(created)} photo(s).",
+                    "photos": created,
+                    "errors": errors,
+                }
+            ),
+            201 if created else 400,
+        )
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+    finally:
+        db.close()
+
 # --- HELPERS ---
 
 
