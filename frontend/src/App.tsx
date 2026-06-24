@@ -11,6 +11,7 @@ import Register from "@/pages/Register";
 import Settings from "@/pages/Settings";
 import AddPlant from "@/pages/AddPlant";
 import ViewPlants from "@/pages/ViewPlants";
+import PlantDetail from "@/pages/PlantDetail";
 import Species from "@/pages/Species";
 import CarePlans from "@/pages/CarePlans";
 import AddCarePlan from "@/pages/AddCarePlan";
@@ -43,6 +44,10 @@ function App() {
           <Route
             path="/plants"
             element={isLoggedIn ? <ViewPlants /> : <Navigate to="/login" />}
+          />
+          <Route
+            path="/plants/:id"
+            element={isLoggedIn ? <PlantDetail /> : <Navigate to="/login" />}
           />
           <Route
             path="/plants/add"
