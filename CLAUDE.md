@@ -96,12 +96,15 @@ PlantTracker/
 - `/api/care-plans/` - Care plan scheduling (create, read, update, delete, active/inactive)
 - `/api/care-types/` - Care types (system defaults + user-created custom types with edit/delete)
 - `/api/dashboard/` - Dashboard data (user plants, upcoming care logs, past care logs)
+- `/api/photos/` - Photo upload, gallery, reorder, delete, file serving (JWT-protected)
 
 **Database Models:**
 - User → Plants (one-to-many, cascade delete)
 - User → CarePlans (one-to-many, cascade delete)
 - User → CareTypes (one-to-many, cascade delete)
-- Plant → CarePlans, PlantCare (history)
+- Plant → CarePlans, PlantCare (history), Photos
+- PlantCare → Photos (care log photos)
+- Photo → polymorphic owner (plant_id OR care_log_id, both ON DELETE CASCADE)
 
 ### Frontend Architecture (React)
 
@@ -110,21 +113,24 @@ PlantTracker/
   - `axios.ts` - Axios instance with JWT interceptor and 401 response handler
   - `auth.ts` - Login and registration endpoints
   - `users.ts` - Get current user, change password
-  - `dashboard.ts`, `plants.ts`, `species.ts`, `careLogs.ts`, `carePlans.ts`, `careTypes.ts` - API endpoint functions
+  - `dashboard.ts`, `plants.ts`, `species.ts`, `careLogs.ts`, `carePlans.ts`, `careTypes.ts`, `photos.ts` - API endpoint functions
 - `src/pages/` - Route components
   - Authentication: `Login.tsx`, `Register.tsx`
   - Dashboard: `Dashboard.tsx`
   - Account: `Settings.tsx`
-  - Plants: `ViewPlants.tsx`, `AddPlant.tsx`
+  - Plants: `ViewPlants.tsx`, `AddPlant.tsx`, `PlantDetail.tsx`
   - Species: `Species.tsx`
   - Care Plans: `CarePlans.tsx`, `AddCarePlan.tsx`
   - Care: `LogCare.tsx`, `CareTypes.tsx`
 - `src/components/` - Reusable components
   - `ui/` - shadcn/ui component library
+  - `auth-image.tsx` - JWT-authenticated image renderer (blob URL with cleanup)
+  - `photo-gallery.tsx` - Grid + lightbox with source badges, delete, reorder
+  - `photo-uploader.tsx` - Drag-drop multi-file upload with preview
   - `mode-toggle.tsx` - Theme toggle component
   - `user-menu.tsx` - User account dropdown menu (logout, settings)
   - `theme-provider.tsx` - Theme context provider
-- `src/types/` - TypeScript interfaces (Plant, Species, CareLog, CarePlan, CareType, UpcomingCareLog)
+- `src/types/` - TypeScript interfaces (Plant, Species, CareLog, CarePlan, CareType, UpcomingCareLog, Photo, PhotoWithSource)
 - `src/lib/utils.ts` - Utility functions
 - `App.tsx` - React Router setup with protected routes
 - `main.tsx` - Entry point
@@ -239,10 +245,23 @@ VITE_API_URL=<backend_url>  # Frontend - points to /api
 
 **View Plants (`/plants`)**
 - Grid display of all plants with species info, location, dates
+- Cover photo thumbnails on cards (from plant's position-0 photo)
+- Clickable cards navigate to plant detail page
 - Edit functionality: Dialog with pre-filled form for nickname, species, location, last watered
 - Delete functionality: Confirmation dialog with cascade deletion warning
 - Search by species with dropdown filter
 - Empty state with CTA to add first plant
+
+**Plant Detail (`/plants/:id`)**
+- Full plant info card (species, location, dates, photo count)
+- Photo gallery section: aggregated view of plant photos + care log photos
+- Plant photos shown first (ordered by position for cover/reorder), care log photos appended
+- Upload photos via drag-and-drop or file picker (JPG, PNG, WebP, HEIC; max 10MB)
+- Reorder plant photos (up/down arrows) to set cover photo (position 0)
+- Delete photos with confirmation dialog
+- Lightbox viewer with source badge, upload date, and original filename
+- Care timeline: vertical timeline of care logs with inline photo thumbnails
+- Quick links to Log Care and Add Plant
 
 **Add Plant (`/plants/add`)**
 - Form: nickname (required), species dropdown, location, date added, last watered
@@ -278,6 +297,8 @@ VITE_API_URL=<backend_url>  # Frontend - points to /api
 
 **Features:**
 - Plant selection, care type selection, care date, notes
+- Optional photo attachment (single-plant mode only; JPG, PNG, WebP, HEIC)
+- Photos upload after care log creation and attach to the new log
 - Recent care logs display (last 10 activities)
 - Real-time updates after logging
 - Enhanced checkbox visual states for better UX
@@ -303,17 +324,62 @@ VITE_API_URL=<backend_url>  # Frontend - points to /api
   - Backend authentication and secure password update
 
 ### Current State
-- Active branch: `feature/react-frontend`
 - Fully functional plant tracking application with complete CRUD operations
 - All core features implemented: plants, species, care plans, care types, care logging
+- Photo support: plant galleries, care log photos, cover photos, reorder
 - Dashboard with upcoming care and mark as done functionality
 - Dark/light theme toggle on all pages
 - Database service commented out in docker-compose.yml (uses local PostgreSQL)
 
+### Photo Storage Architecture
+
+**Storage:** Photos stored on disk at `UPLOAD_FOLDER` (env var):
+- Local dev: set `UPLOAD_FOLDER` in `.env` to a local path (e.g., project `uploads/` dir)
+- Docker: bind-mounted from host `/uploads` (NAS mount) to container `/app/uploads`
+
+**Disk Layout:**
+```
+uploads/
+  plants/<plant_id>/<uuid>.jpg          # original (all formats converted to JPEG)
+  plants/<plant_id>/<uuid>_thumb.jpg    # 400px wide thumbnail
+  care-logs/<care_log_id>/<uuid>.jpg
+  care-logs/<care_log_id>/<uuid>_thumb.jpg
+```
+
+**Photo Processing (PhotoService):**
+- MIME validation via python-magic (content sniffing, not header trust)
+- HEIC/HEIF auto-converted to JPEG for browser compatibility (via pillow-heif)
+- Thumbnail generation at 400px wide (Pillow LANCZOS)
+- Files named with UUID (unguessable, immutable)
+- Position field for plant photos (0 = cover photo shown on grid)
+
+**File Serving:**
+- JWT-protected route: `GET /api/photos/<id>/file?thumb=1`
+- Ownership verified before serving (users can't access each other's photos)
+- Frontend uses `AuthImage` component (fetches via axios with JWT, renders blob URL, revokes on unmount)
+
+**Cascade Cleanup:**
+- DB cascade: `ON DELETE CASCADE` on FKs auto-removes Photo rows when plant/care log deleted
+- Disk cleanup: `PhotoService.cleanup_plant_files()` / `cleanup_care_log_files()` called BEFORE the parent delete commits (otherwise care_log IDs are lost and their dirs become orphans)
+
+**Photo API Endpoints:**
+- `GET /api/photos/plant/<id>` - Aggregated gallery (plant photos first by position, then care log photos)
+- `POST /api/photos/plant/<id>` - Upload to plant (multipart, field `files`)
+- `GET /api/photos/care-log/<id>` - Care log's photos
+- `POST /api/photos/care-log/<id>` - Upload to care log
+- `PATCH /api/photos/<id>` - Update position (reorder/cover)
+- `DELETE /api/photos/<id>` - Delete (DB + disk files)
+- `GET /api/photos/<id>/file?thumb=1` - Serve file (JWT + ownership check)
+
+**Frontend Photo Components:**
+- `AuthImage` - JWT-authenticated image renderer (blob URL with cleanup)
+- `PhotoGallery` - Grid + lightbox with source badges, delete, reorder arrows
+- `PhotoUploader` - Drag-drop multi-file upload with preview and validation
+
 ## Tech Stack Summary
 
-**Backend:** Flask 3.1.1, SQLAlchemy 2.0.41, PostgreSQL, Alembic, Flask-JWT-Extended, Flask-CORS
+**Backend:** Flask 3.1.1, SQLAlchemy 2.0.41, PostgreSQL, Alembic, Flask-JWT-Extended, Flask-CORS, Pillow, pillow-heif, python-magic
 
 **Frontend:** React 19.1.1, TypeScript 5.8.3, Vite 7.0.6, Tailwind CSS 4.1.11, shadcn/ui, React Router 7.7.1, Axios 1.11.0
 
-**Deployment:** Docker Compose (Flask on :5000, Nginx serving React on :3000)
+**Deployment:** Docker Compose (Flask on :5000, Nginx serving React on :3001)
