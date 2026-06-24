@@ -33,7 +33,12 @@ import { PhotoUploader } from "@/components/photo-uploader";
 import { AuthImage } from "@/components/auth-image";
 import { getPlant } from "@/api/plants";
 import { getAllSpecies } from "@/api/species";
-import { getPlantPhotos, uploadPlantPhotos, deletePhoto } from "@/api/photos";
+import {
+  getPlantPhotos,
+  uploadPlantPhotos,
+  deletePhoto,
+  updatePhotoPosition,
+} from "@/api/photos";
 import { getCareLogsByPlant } from "@/api/careLogs";
 import { getDefaultCareTypes, getUserCareTypes } from "@/api/careTypes";
 import type {
@@ -132,6 +137,36 @@ export default function PlantDetail() {
       setTimeout(() => setSuccess(""), 5000);
     } catch {
       setError("Failed to delete photo");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleReorder = async (
+    photoId: number,
+    direction: "up" | "down",
+  ) => {
+    // Get plant photos sorted by position
+    const plantPhotos = photos
+      .filter((p) => p.source.type === "plant")
+      .sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
+
+    const idx = plantPhotos.findIndex((p) => p.id === photoId);
+    if (idx === -1) return;
+
+    const swapIdx = direction === "up" ? idx - 1 : idx + 1;
+    if (swapIdx < 0 || swapIdx >= plantPhotos.length) return;
+
+    const current = plantPhotos[idx];
+    const swapWith = plantPhotos[swapIdx];
+
+    setActionLoading(true);
+    try {
+      await updatePhotoPosition(current.id, swapWith.position ?? 0);
+      await updatePhotoPosition(swapWith.id, current.position ?? 0);
+      await refreshPhotos();
+    } catch {
+      setError("Failed to reorder photos");
     } finally {
       setActionLoading(false);
     }
@@ -323,6 +358,7 @@ export default function PlantDetail() {
               <PhotoGallery
                 photos={photos}
                 onDelete={(photoId) => setPhotoToDelete(photoId)}
+                onReorder={handleReorder}
               />
             </CardContent>
           </Card>
@@ -353,7 +389,13 @@ export default function PlantDetail() {
                 </p>
               ) : (
                 <div className="border-l-2 border-muted space-y-4 ml-1">
-                  {careLogs.map((log) => {
+                  {[...careLogs]
+                    .sort(
+                      (a, b) =>
+                        new Date(b.care_date).getTime() -
+                        new Date(a.care_date).getTime(),
+                    )
+                    .map((log) => {
                     const careType = careTypes.find(
                       (ct) => ct.id === log.care_type_id,
                     );

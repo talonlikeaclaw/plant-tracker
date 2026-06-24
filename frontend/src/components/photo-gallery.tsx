@@ -1,5 +1,10 @@
 import { useState } from "react";
-import { Trash2Icon, ImageIcon } from "lucide-react";
+import {
+  Trash2Icon,
+  ImageIcon,
+  ChevronUpIcon,
+  ChevronDownIcon,
+} from "lucide-react";
 import { format } from "date-fns";
 import { AuthImage } from "@/components/auth-image";
 import { Badge } from "@/components/ui/badge";
@@ -17,6 +22,8 @@ interface PhotoGalleryProps {
   photos: PhotoWithSource[];
   /** If provided, a delete button appears on each photo (hover + lightbox) */
   onDelete?: (photoId: number) => void;
+  /** If provided, up/down arrows appear on plant-source photos for reordering */
+  onReorder?: (photoId: number, direction: "up" | "down") => void;
   className?: string;
 }
 
@@ -32,6 +39,7 @@ function getSourceLabel(source: PhotoSource): string {
 export function PhotoGallery({
   photos,
   onDelete,
+  onReorder,
   className,
 }: PhotoGalleryProps) {
   const [selected, setSelected] = useState<PhotoWithSource | null>(null);
@@ -99,6 +107,45 @@ export function PhotoGallery({
                 <Trash2Icon className="h-3.5 w-3.5" />
               </span>
             )}
+            {/* Reorder arrows (plant photos only) */}
+            {onReorder && photo.source.type === "plant" && (
+              <div className="absolute bottom-1 left-1 flex gap-0.5 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
+                <span
+                  role="button"
+                  tabIndex={0}
+                  className="flex h-6 w-6 items-center justify-center rounded bg-black/60 text-white hover:bg-black/80"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onReorder(photo.id, "up");
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.stopPropagation();
+                      onReorder(photo.id, "up");
+                    }
+                  }}
+                >
+                  <ChevronUpIcon className="h-3.5 w-3.5" />
+                </span>
+                <span
+                  role="button"
+                  tabIndex={0}
+                  className="flex h-6 w-6 items-center justify-center rounded bg-black/60 text-white hover:bg-black/80"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onReorder(photo.id, "down");
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.stopPropagation();
+                      onReorder(photo.id, "down");
+                    }
+                  }}
+                >
+                  <ChevronDownIcon className="h-3.5 w-3.5" />
+                </span>
+              </div>
+            )}
           </button>
         ))}
       </div>
@@ -126,6 +173,11 @@ export function PhotoGallery({
                   <Badge variant="secondary" className="text-xs">
                     {getSourceLabel(selected.source)}
                   </Badge>
+                  {selected.created_at && (
+                    <p className="text-xs text-muted-foreground">
+                      {format(new Date(selected.created_at), "MMM d, yyyy")}
+                    </p>
+                  )}
                   {selected.original_filename && (
                     <p className="truncate text-sm text-muted-foreground">
                       {selected.original_filename}

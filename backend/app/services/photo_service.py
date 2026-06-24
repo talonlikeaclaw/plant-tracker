@@ -122,14 +122,15 @@ class PhotoService:
 
     def get_aggregated_plant_photos(self, plant_id: int) -> List[dict]:
         """Returns a unified gallery for a Plant: the Plant's own photos plus
-        every photo attached to any of its care logs.).
+        every photo attached to any of its care logs.
 
-        Returns:
-            List[dict]: Photos sorted by creation date (newest first).
+        Plant photos are ordered by position (so reorder/cover works) and come
+        first. Care log photos are appended after, grouped by care log (newest
+        log first).
         """
         results: List[dict] = []
 
-        # Plant's own photos
+        # Plant's own photos — already sorted by position (cover first)
         for photo in self.get_plant_photos(plant_id):
             results.append(self._serialize_photo(photo, source_type="plant"))
 
@@ -153,8 +154,6 @@ class PhotoService:
                     )
                 )
 
-        # Newest first
-        results.sort(key=lambda p: p["created_at"], reverse=True)
         return results
 
     # --- REORDER / DELETE ---
@@ -383,7 +382,7 @@ class PhotoService:
         else:
             return 0
         current_max = q.scalar()
-        return (current_max or -1) + 1
+        return (current_max if current_max is not None else -1) + 1
 
     @staticmethod
     def _thumb_name(filename: str) -> str:
