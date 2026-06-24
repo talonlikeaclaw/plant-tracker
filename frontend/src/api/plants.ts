@@ -16,6 +16,11 @@ export async function getAllPlants() {
   return res.data;
 }
 
+export async function getPlant(id: number) {
+  const res = await api.get(`/plants/${id}`);
+  return res.data;
+}
+
 export async function updatePlant(
   id: number,
   data: {
