@@ -8,6 +8,10 @@ services:
       - "5000:5000"
     env_file:
       - .env
+    environment:
+      - UPLOAD_FOLDER=/app/uploads
+    volumes:
+      - /uploads:/app/uploads
     restart: unless-stopped
     # depends_on:
     #   - db
