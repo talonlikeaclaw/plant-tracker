@@ -1,6 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { AlertCircleIcon, CheckCircle2Icon } from "lucide-react";
+import {
+  AlertCircleIcon,
+  CheckCircle2Icon,
+  CameraIcon,
+  XIcon,
+} from "lucide-react";
 import {
   Card,
   CardContent,
@@ -21,6 +26,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { createCareLog } from "@/api/careLogs";
+import { uploadCareLogPhotos } from "@/api/photos";
 import { getAllPlants } from "@/api/plants";
 import { getDefaultCareTypes, getUserCareTypes } from "@/api/careTypes";
 import { getPastCareLogs } from "@/api/dashboard";
@@ -60,6 +66,39 @@ export default function LogCare() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+
+  // Photo selection for single-plant mode
+  const [selectedFiles, setSelectedFiles] = useState<
+    { file: File; preview: string }[]
+  >([]);
+  const filesRef = useRef(selectedFiles);
+  filesRef.current = selectedFiles;
+
+  useEffect(() => {
+    return () =>
+      filesRef.current.forEach((f) => URL.revokeObjectURL(f.preview));
+  }, []);
+
+  const addFiles = (fileList: FileList | null) => {
+    if (!fileList) return;
+    const newItems = Array.from(fileList).map((file) => ({
+      file,
+      preview: URL.createObjectURL(file),
+    }));
+    setSelectedFiles((prev) => [...prev, ...newItems]);
+  };
+
+  const removeFile = (idx: number) => {
+    setSelectedFiles((prev) => {
+      URL.revokeObjectURL(prev[idx].preview);
+      return prev.filter((_, i) => i !== idx);
+    });
+  };
+
+  const clearFiles = () => {
+    selectedFiles.forEach((f) => URL.revokeObjectURL(f.preview));
+    setSelectedFiles([]);
+  };
 
   const loadData = async () => {
     try {
@@ -116,8 +155,25 @@ export default function LogCare() {
       if (singleForm.care_date) logData.care_date = singleForm.care_date;
       if (singleForm.note) logData.note = singleForm.note;
 
-      await createCareLog(logData);
+      const result = await createCareLog(logData);
+
+      // Upload photos if any were selected
+      if (selectedFiles.length > 0) {
+        try {
+          await uploadCareLogPhotos(
+            result.care_log.id,
+            selectedFiles.map((f) => f.file),
+          );
+        } catch {
+          setSuccess("Care logged, but photo upload failed.");
+          clearFiles();
+          loadData();
+          return;
+        }
+      }
+
       setSuccess("Care logged successfully!");
+      clearFiles();
 
       // Reset form
       setSingleForm({
@@ -134,7 +190,7 @@ export default function LogCare() {
       setError(
         err.response?.data?.error ||
           err.response?.data?.message ||
-          "Failed to log care. Please try again."
+          "Failed to log care. Please try again.",
       );
     } finally {
       setLoading(false);
@@ -162,14 +218,14 @@ export default function LogCare() {
             care_type_id: parseInt(multiCareType),
             care_date: careDate,
             note: multiNote || undefined,
-          })
-        )
+          }),
+        ),
       );
 
       setSuccess(
         `Care logged for ${selectedPlants.length} plant${
           selectedPlants.length > 1 ? "s" : ""
-        }!`
+        }!`,
       );
 
       // Reset
@@ -191,7 +247,7 @@ export default function LogCare() {
     setSelectedPlants((prev) =>
       prev.includes(plantId)
         ? prev.filter((id) => id !== plantId)
-        : [...prev, plantId]
+        : [...prev, plantId],
     );
   };
 
@@ -298,7 +354,10 @@ export default function LogCare() {
                           </SelectItem>
                         ) : (
                           plants.map((plant) => (
-                            <SelectItem key={plant.id} value={plant.id.toString()}>
+                            <SelectItem
+                              key={plant.id}
+                              value={plant.id.toString()}
+                            >
                               {plant.nickname}
                             </SelectItem>
                           ))
@@ -340,7 +399,10 @@ export default function LogCare() {
                       type="date"
                       value={singleForm.care_date}
                       onChange={(e) =>
-                        setSingleForm({ ...singleForm, care_date: e.target.value })
+                        setSingleForm({
+                          ...singleForm,
+                          care_date: e.target.value,
+                        })
                       }
                       disabled={loading}
                     />
@@ -361,6 +423,46 @@ export default function LogCare() {
                     />
                   </div>
 
+                  {/* Photos */}
+                  <div className="space-y-2">
+                    <Label>Photos (Optional)</Label>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedFiles.map((item, idx) => (
+                        <div
+                          key={item.preview}
+                          className="group relative h-16 w-16 overflow-hidden rounded-lg"
+                        >
+                          <img
+                            src={item.preview}
+                            alt=""
+                            className="h-full w-full object-cover"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => removeFile(idx)}
+                            className="absolute right-0.5 top-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-destructive-foreground opacity-0 transition-opacity group-hover:opacity-100"
+                          >
+                            <XIcon className="h-3 w-3" />
+                          </button>
+                        </div>
+                      ))}
+                      <label className="flex h-16 w-16 cursor-pointer items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/30 transition-colors hover:border-muted-foreground/50">
+                        <input
+                          type="file"
+                          multiple
+                          accept="image/jpeg,image/png,image/webp,image/heic,.heic,.heif"
+                          className="hidden"
+                          onChange={(e) => {
+                            addFiles(e.target.files);
+                            e.target.value = "";
+                          }}
+                          disabled={loading}
+                        />
+                        <CameraIcon className="h-5 w-5 text-muted-foreground" />
+                      </label>
+                    </div>
+                  </div>
+
                   {/* Submit */}
                   <Button type="submit" disabled={loading} className="w-full">
                     {loading ? "Logging..." : "Log Care"}
@@ -376,8 +478,8 @@ export default function LogCare() {
               <CardHeader>
                 <CardTitle>Log Care for Multiple Plants</CardTitle>
                 <CardDescription>
-                  Select multiple plants to log the same care activity for all at
-                  once
+                  Select multiple plants to log the same care activity for all
+                  at once
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -423,7 +525,9 @@ export default function LogCare() {
                           <Checkbox
                             id={`plant-${plant.id}`}
                             checked={selectedPlants.includes(plant.id)}
-                            onCheckedChange={() => togglePlantSelection(plant.id)}
+                            onCheckedChange={() =>
+                              togglePlantSelection(plant.id)
+                            }
                             disabled={loading}
                           />
                           <Label
@@ -437,8 +541,8 @@ export default function LogCare() {
                     )}
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    {selectedPlants.length} plant{selectedPlants.length !== 1 && "s"}{" "}
-                    selected
+                    {selectedPlants.length} plant
+                    {selectedPlants.length !== 1 && "s"} selected
                   </p>
                 </div>
 
@@ -487,7 +591,12 @@ export default function LogCare() {
             ) : (
               <div className="space-y-3">
                 {recentLogs.slice(0, 10).map((log, index) => (
-                  <Card key={log.id || `log-${log.plant_id}-${log.care_type_id}-${index}`}>
+                  <Card
+                    key={
+                      log.id ||
+                      `log-${log.plant_id}-${log.care_type_id}-${index}`
+                    }
+                  >
                     <CardContent className="py-4">
                       <div className="flex items-center justify-between">
                         <div className="flex-1">
