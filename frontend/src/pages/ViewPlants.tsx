@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
+import { AuthImage } from "@/components/auth-image";
 import { getAllPlants, updatePlant, deletePlant } from "@/api/plants";
 import { getAllSpecies } from "@/api/species";
 import { getCareLogsByPlant } from "@/api/careLogs";
@@ -310,12 +311,31 @@ export default function ViewPlants() {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {enrichedPlants.map((plant) => (
-                  <Card key={plant.id}>
+                  <Card key={plant.id} className="overflow-hidden">
+                    {plant.cover_photo_id && (
+                      <button
+                        type="button"
+                        onClick={() => navigate(`/plants/${plant.id}`)}
+                        className="group block w-full"
+                      >
+                        <AuthImage
+                          photoId={plant.cover_photo_id}
+                          thumb
+                          className="h-32 w-full object-cover transition-transform group-hover:scale-105"
+                        />
+                      </button>
+                    )}
                     <CardHeader>
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex-1 min-w-0">
                           <CardTitle className="text-lg mb-1 truncate">
-                            {plant.nickname}
+                            <button
+                              type="button"
+                              onClick={() => navigate(`/plants/${plant.id}`)}
+                              className="hover:underline text-left"
+                            >
+                              {plant.nickname}
+                            </button>
                           </CardTitle>
                           <CardDescription className="mb-2">
                             {getSpeciesName(plant.species_id)}
