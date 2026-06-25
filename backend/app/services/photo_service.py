@@ -7,7 +7,7 @@ from typing import List, Optional
 
 import magic
 from flask import current_app
-from PIL import Image
+from PIL import Image, ImageOps
 from pillow_heif import register_heif_opener
 from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
@@ -314,6 +314,7 @@ class PhotoService:
 
         # Open with Pillow
         img = Image.open(io.BytesIO(raw))
+        img = ImageOps.exif_transpose(img)
 
         # Capture original dimensions
         original_width, original_height = img.size
