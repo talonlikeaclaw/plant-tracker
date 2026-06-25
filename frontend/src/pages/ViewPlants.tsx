@@ -9,6 +9,7 @@ import {
   HistoryIcon,
   MapPinIcon,
   CalendarIcon,
+  LeafIcon,
 } from "lucide-react";
 import {
   Card,
@@ -347,19 +348,23 @@ export default function ViewPlants() {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {enrichedPlants.map((plant) => (
                   <Card key={plant.id} className="overflow-hidden">
-                    {plant.cover_photo_id && (
-                      <button
-                        type="button"
-                        onClick={() => navigate(`/plants/${plant.id}`)}
-                        className="group block w-full"
-                      >
+                    <button
+                      type="button"
+                      onClick={() => navigate(`/plants/${plant.id}`)}
+                      className="group block w-full"
+                    >
+                      {plant.cover_photo_id ? (
                         <AuthImage
                           photoId={plant.cover_photo_id}
                           thumb
                           className="h-64 w-full object-cover transition-transform group-hover:scale-105"
                         />
-                      </button>
-                    )}
+                      ) : (
+                        <div className="h-64 w-full bg-muted flex items-center justify-center">
+                          <LeafIcon className="h-16 w-16 text-muted-foreground/50" />
+                        </div>
+                      )}
+                    </button>
                     <CardHeader>
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex-1 min-w-0">
@@ -572,28 +577,30 @@ export default function ViewPlants() {
                             <span>Recent Care</span>
                           </div>
                           <div className="space-y-1.5">
-                            {plant.recentCareHistory.map((care, idx) => (
-                              <div
-                                key={idx}
-                                className="flex items-baseline gap-1.5 text-sm"
-                              >
-                                <div className="h-1.5 w-1.5 rounded-full bg-primary/60 shrink-0 mt-1.5" />
-                                <div>
-                                  <span className="font-medium text-foreground">
-                                    {care.careTypeName}
-                                  </span>
-                                  <span className="text-muted-foreground">
-                                    {" "}
-                                    ·{" "}
-                                    {care.daysAgo === 0
-                                      ? "today"
-                                      : care.daysAgo === 1
-                                        ? "yesterday"
-                                        : `${care.daysAgo}d ago`}
-                                  </span>
+                            {plant.recentCareHistory
+                              .slice(0, 1)
+                              .map((care, idx) => (
+                                <div
+                                  key={idx}
+                                  className="flex items-baseline gap-1.5 text-sm"
+                                >
+                                  <div className="h-1.5 w-1.5 rounded-full bg-primary/60 shrink-0 mt-1.5" />
+                                  <div>
+                                    <span className="font-medium text-foreground">
+                                      {care.careTypeName}
+                                    </span>
+                                    <span className="text-muted-foreground">
+                                      {" "}
+                                      ·{" "}
+                                      {care.daysAgo === 0
+                                        ? "today"
+                                        : care.daysAgo === 1
+                                          ? "yesterday"
+                                          : `${care.daysAgo}d ago`}
+                                    </span>
+                                  </div>
                                 </div>
-                              </div>
-                            ))}
+                              ))}
                           </div>
                         </div>
                       )}
@@ -606,7 +613,7 @@ export default function ViewPlants() {
                             <span>Upcoming Care</span>
                           </div>
                           <div className="space-y-1.5">
-                            {plant.upcomingCare.slice(0, 3).map((care, idx) => {
+                            {plant.upcomingCare.slice(0, 1).map((care, idx) => {
                               const isPending = care.days_until_due > 7;
                               return (
                                 <div
