@@ -1,6 +1,15 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { PencilIcon, Trash2Icon, AlertCircleIcon, PlusCircleIcon, ClockIcon, HistoryIcon, MapPinIcon, CalendarIcon } from "lucide-react";
+import {
+  PencilIcon,
+  Trash2Icon,
+  AlertCircleIcon,
+  PlusCircleIcon,
+  ClockIcon,
+  HistoryIcon,
+  MapPinIcon,
+  CalendarIcon,
+} from "lucide-react";
 import {
   Card,
   CardContent,
@@ -34,7 +43,14 @@ import { getAllSpecies } from "@/api/species";
 import { getCareLogsByPlant } from "@/api/careLogs";
 import { getUpcomingCareLogs } from "@/api/dashboard";
 import { getDefaultCareTypes, getUserCareTypes } from "@/api/careTypes";
-import type { Plant, Species, PlantWithCareData, CareType, UpcomingCareLog, CareLog } from "@/types";
+import type {
+  Plant,
+  Species,
+  PlantWithCareData,
+  CareType,
+  UpcomingCareLog,
+  CareLog,
+} from "@/types";
 import { format } from "date-fns";
 import { parseLocalDate } from "@/lib/utils";
 
@@ -62,12 +78,13 @@ export default function ViewPlants() {
   const loadData = async () => {
     try {
       // Fetch all basic data
-      const [plantsRes, speciesRes, defaultCareTypesRes, userCareTypesRes] = await Promise.all([
-        getAllPlants(),
-        getAllSpecies(),
-        getDefaultCareTypes(),
-        getUserCareTypes(),
-      ]);
+      const [plantsRes, speciesRes, defaultCareTypesRes, userCareTypesRes] =
+        await Promise.all([
+          getAllPlants(),
+          getAllSpecies(),
+          getDefaultCareTypes(),
+          getUserCareTypes(),
+        ]);
 
       const plantsData = plantsRes.plants ?? [];
       const allCareTypes = [
@@ -84,59 +101,75 @@ export default function ViewPlants() {
       ]);
 
       // Enrich each plant with care data
-      const enriched: PlantWithCareData[] = plantsData.map((plant: Plant, index: number) => {
-        const careLogs = careLogsData[index].care_logs ?? [];
-        const upcomingCare = upcomingCareData.filter((care: UpcomingCareLog) => care.plant_id === plant.id);
-
-        // Calculate urgency status
-        let urgencyStatus: "overdue" | "due_today" | "due_soon" | "up_to_date" = "up_to_date";
-        if (upcomingCare.length > 0) {
-          const mostUrgent = upcomingCare.reduce((prev: UpcomingCareLog, curr: UpcomingCareLog) =>
-            curr.days_until_due < prev.days_until_due ? curr : prev
+      const enriched: PlantWithCareData[] = plantsData.map(
+        (plant: Plant, index: number) => {
+          const careLogs = careLogsData[index].care_logs ?? [];
+          const upcomingCare = upcomingCareData.filter(
+            (care: UpcomingCareLog) => care.plant_id === plant.id,
           );
 
-          if (mostUrgent.days_until_due < 0) {
-            urgencyStatus = "overdue";
-          } else if (mostUrgent.days_until_due === 0) {
-            urgencyStatus = "due_today";
-          } else if (mostUrgent.days_until_due <= 3) {
-            urgencyStatus = "due_soon";
+          // Calculate urgency status
+          let urgencyStatus:
+            | "overdue"
+            | "due_today"
+            | "due_soon"
+            | "up_to_date" = "up_to_date";
+          if (upcomingCare.length > 0) {
+            const mostUrgent = upcomingCare.reduce(
+              (prev: UpcomingCareLog, curr: UpcomingCareLog) =>
+                curr.days_until_due < prev.days_until_due ? curr : prev,
+            );
+
+            if (mostUrgent.days_until_due < 0) {
+              urgencyStatus = "overdue";
+            } else if (mostUrgent.days_until_due === 0) {
+              urgencyStatus = "due_today";
+            } else if (mostUrgent.days_until_due <= 3) {
+              urgencyStatus = "due_soon";
+            }
           }
-        }
 
-        // Group care logs by care type and get most recent for each
-        const careTypeMap = new Map<number, CareLog>();
-        careLogs.forEach((log: CareLog) => {
-          const existing = careTypeMap.get(log.care_type_id);
-          if (!existing || new Date(log.care_date) > new Date(existing.care_date)) {
-            careTypeMap.set(log.care_type_id, log);
-          }
-        });
+          // Group care logs by care type and get most recent for each
+          const careTypeMap = new Map<number, CareLog>();
+          careLogs.forEach((log: CareLog) => {
+            const existing = careTypeMap.get(log.care_type_id);
+            if (
+              !existing ||
+              new Date(log.care_date) > new Date(existing.care_date)
+            ) {
+              careTypeMap.set(log.care_type_id, log);
+            }
+          });
 
-        // Create care history summary
-        const recentCareHistory = Array.from(careTypeMap.values())
-          .map((log: CareLog) => {
-            const careType = allCareTypes.find((ct: CareType) => ct.id === log.care_type_id);
-            const careDate = new Date(log.care_date);
-            const now = new Date();
-            const daysAgo = Math.floor((now.getTime() - careDate.getTime()) / (1000 * 60 * 60 * 24));
+          // Create care history summary
+          const recentCareHistory = Array.from(careTypeMap.values())
+            .map((log: CareLog) => {
+              const careType = allCareTypes.find(
+                (ct: CareType) => ct.id === log.care_type_id,
+              );
+              const careDate = new Date(log.care_date);
+              const now = new Date();
+              const daysAgo = Math.floor(
+                (now.getTime() - careDate.getTime()) / (1000 * 60 * 60 * 24),
+              );
 
-            return {
-              careTypeName: careType?.name || "Unknown",
-              lastCareDate: log.care_date,
-              daysAgo,
-            };
-          })
-          .sort((a, b) => a.daysAgo - b.daysAgo)
-          .slice(0, 5); // Show only top 5 most recent care types
+              return {
+                careTypeName: careType?.name || "Unknown",
+                lastCareDate: log.care_date,
+                daysAgo,
+              };
+            })
+            .sort((a, b) => a.daysAgo - b.daysAgo)
+            .slice(0, 5); // Show only top 5 most recent care types
 
-        return {
-          ...plant,
-          recentCareHistory,
-          upcomingCare,
-          urgencyStatus,
-        };
-      });
+          return {
+            ...plant,
+            recentCareHistory,
+            upcomingCare,
+            urgencyStatus,
+          };
+        },
+      );
 
       setEnrichedPlants(enriched);
     } catch (err) {
@@ -185,9 +218,11 @@ export default function ViewPlants() {
         nickname: editForm.nickname,
       };
 
-      if (editForm.species_id) updateData.species_id = parseInt(editForm.species_id);
+      if (editForm.species_id)
+        updateData.species_id = parseInt(editForm.species_id);
       if (editForm.location) updateData.location = editForm.location;
-      if (editForm.last_watered) updateData.last_watered = editForm.last_watered;
+      if (editForm.last_watered)
+        updateData.last_watered = editForm.last_watered;
 
       await updatePlant(editingPlant.id, updateData);
       setSuccess("Plant updated successfully!");
@@ -321,7 +356,7 @@ export default function ViewPlants() {
                         <AuthImage
                           photoId={plant.cover_photo_id}
                           thumb
-                          className="h-32 w-full object-cover transition-transform group-hover:scale-105"
+                          className="h-64 w-full object-cover transition-transform group-hover:scale-105"
                         />
                       </button>
                     )}
@@ -350,9 +385,10 @@ export default function ViewPlants() {
                             {plant.urgencyStatus === "due_soon" && (
                               <Badge variant="success">Due Soon</Badge>
                             )}
-                            {plant.urgencyStatus === "up_to_date" && plant.recentCareHistory.length > 0 && (
-                              <Badge variant="secondary">All Set</Badge>
-                            )}
+                            {plant.urgencyStatus === "up_to_date" &&
+                              plant.recentCareHistory.length > 0 && (
+                                <Badge variant="secondary">All Set</Badge>
+                              )}
                           </div>
                         </div>
                         <div className="flex gap-1 shrink-0">
@@ -383,7 +419,8 @@ export default function ViewPlants() {
                                 {/* Nickname */}
                                 <div className="space-y-2">
                                   <Label htmlFor="edit-nickname">
-                                    Nickname <span className="text-destructive">*</span>
+                                    Nickname{" "}
+                                    <span className="text-destructive">*</span>
                                   </Label>
                                   <Input
                                     id="edit-nickname"
@@ -429,7 +466,9 @@ export default function ViewPlants() {
 
                                 {/* Location */}
                                 <div className="space-y-2">
-                                  <Label htmlFor="edit-location">Location</Label>
+                                  <Label htmlFor="edit-location">
+                                    Location
+                                  </Label>
                                   <Input
                                     id="edit-location"
                                     value={editForm.location}
@@ -508,14 +547,17 @@ export default function ViewPlants() {
                           {plant.location && (
                             <div className="flex items-center gap-2 text-sm">
                               <MapPinIcon className="h-4 w-4 text-muted-foreground shrink-0" />
-                              <span className="text-foreground">{plant.location}</span>
+                              <span className="text-foreground">
+                                {plant.location}
+                              </span>
                             </div>
                           )}
                           {plant.date_added && (
                             <div className="flex items-center gap-2 text-sm">
                               <CalendarIcon className="h-4 w-4 text-muted-foreground shrink-0" />
                               <span className="text-muted-foreground">
-                                Added {format(parseLocalDate(plant.date_added), "PP")}
+                                Added{" "}
+                                {format(parseLocalDate(plant.date_added), "PP")}
                               </span>
                             </div>
                           )}
@@ -531,16 +573,23 @@ export default function ViewPlants() {
                           </div>
                           <div className="space-y-1.5">
                             {plant.recentCareHistory.map((care, idx) => (
-                              <div key={idx} className="flex items-baseline gap-1.5 text-sm">
+                              <div
+                                key={idx}
+                                className="flex items-baseline gap-1.5 text-sm"
+                              >
                                 <div className="h-1.5 w-1.5 rounded-full bg-primary/60 shrink-0 mt-1.5" />
                                 <div>
-                                  <span className="font-medium text-foreground">{care.careTypeName}</span>
+                                  <span className="font-medium text-foreground">
+                                    {care.careTypeName}
+                                  </span>
                                   <span className="text-muted-foreground">
-                                    {" "}· {care.daysAgo === 0
+                                    {" "}
+                                    ·{" "}
+                                    {care.daysAgo === 0
                                       ? "today"
                                       : care.daysAgo === 1
-                                      ? "yesterday"
-                                      : `${care.daysAgo}d ago`}
+                                        ? "yesterday"
+                                        : `${care.daysAgo}d ago`}
                                   </span>
                                 </div>
                               </div>
@@ -560,32 +609,43 @@ export default function ViewPlants() {
                             {plant.upcomingCare.slice(0, 3).map((care, idx) => {
                               const isPending = care.days_until_due > 7;
                               return (
-                                <div key={idx} className="flex items-baseline gap-1.5 text-sm">
-                                  <div className={`h-1.5 w-1.5 rounded-full shrink-0 mt-1.5 ${
-                                    care.days_until_due < 0
-                                      ? "bg-destructive"
-                                      : care.days_until_due === 0
-                                      ? "bg-yellow-500"
-                                      : isPending
-                                      ? "bg-muted-foreground/40"
-                                      : "bg-green-500"
-                                  }`} />
-                                  <div>
-                                    <span className="font-medium text-foreground">{care.care_type}</span>
-                                    <span className={`${
+                                <div
+                                  key={idx}
+                                  className="flex items-baseline gap-1.5 text-sm"
+                                >
+                                  <div
+                                    className={`h-1.5 w-1.5 rounded-full shrink-0 mt-1.5 ${
                                       care.days_until_due < 0
-                                        ? "text-destructive"
+                                        ? "bg-destructive"
                                         : care.days_until_due === 0
-                                        ? "text-yellow-600 dark:text-yellow-500"
-                                        : isPending
-                                        ? "text-muted-foreground/70"
-                                        : "text-muted-foreground"
-                                    }`}>
-                                      {" "}· {care.days_until_due < 0
+                                          ? "bg-yellow-500"
+                                          : isPending
+                                            ? "bg-muted-foreground/40"
+                                            : "bg-green-500"
+                                    }`}
+                                  />
+                                  <div>
+                                    <span className="font-medium text-foreground">
+                                      {care.care_type}
+                                    </span>
+                                    <span
+                                      className={`${
+                                        care.days_until_due < 0
+                                          ? "text-destructive"
+                                          : care.days_until_due === 0
+                                            ? "text-yellow-600 dark:text-yellow-500"
+                                            : isPending
+                                              ? "text-muted-foreground/70"
+                                              : "text-muted-foreground"
+                                      }`}
+                                    >
+                                      {" "}
+                                      ·{" "}
+                                      {care.days_until_due < 0
                                         ? `${Math.abs(care.days_until_due)}d overdue`
                                         : care.days_until_due === 0
-                                        ? "due today"
-                                        : `in ${care.days_until_due}d`}
+                                          ? "due today"
+                                          : `in ${care.days_until_due}d`}
                                     </span>
                                   </div>
                                 </div>
@@ -596,16 +656,17 @@ export default function ViewPlants() {
                       )}
 
                       {/* No care data message */}
-                      {plant.recentCareHistory.length === 0 && plant.upcomingCare.length === 0 && (
-                        <div className="rounded-lg border-2 border-dashed border-muted-foreground/20 p-4 text-center">
-                          <p className="text-sm text-muted-foreground">
-                            No care logs or plans yet
-                          </p>
-                          <p className="text-xs text-muted-foreground/70 mt-1">
-                            Add a care plan to get started
-                          </p>
-                        </div>
-                      )}
+                      {plant.recentCareHistory.length === 0 &&
+                        plant.upcomingCare.length === 0 && (
+                          <div className="rounded-lg border-2 border-dashed border-muted-foreground/20 p-4 text-center">
+                            <p className="text-sm text-muted-foreground">
+                              No care logs or plans yet
+                            </p>
+                            <p className="text-xs text-muted-foreground/70 mt-1">
+                              Add a care plan to get started
+                            </p>
+                          </div>
+                        )}
 
                       {/* Quick Actions */}
                       <div className="pt-3 border-t flex gap-2">
@@ -613,7 +674,9 @@ export default function ViewPlants() {
                           variant="outline"
                           size="sm"
                           className="flex-1"
-                          onClick={() => navigate(`/log-care?plant=${plant.id}`)}
+                          onClick={() =>
+                            navigate(`/log-care?plant=${plant.id}`)
+                          }
                         >
                           Log Care
                         </Button>
@@ -621,7 +684,9 @@ export default function ViewPlants() {
                           variant="outline"
                           size="sm"
                           className="flex-1"
-                          onClick={() => navigate(`/care-plans/add?plant=${plant.id}`)}
+                          onClick={() =>
+                            navigate(`/care-plans/add?plant=${plant.id}`)
+                          }
                         >
                           Add Plan
                         </Button>
