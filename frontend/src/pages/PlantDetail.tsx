@@ -240,10 +240,10 @@ export default function PlantDetail() {
                 Plants
               </Button>
               <h1 className="text-xl sm:text-2xl font-bold text-foreground truncate">
-                {plant.nickname}
+                Plant Details
               </h1>
               <p className="text-sm text-muted-foreground mt-1">
-                {getSpeciesName(plant.species_id)}
+                Information about this plant
               </p>
             </div>
             <div className="flex gap-2 shrink-0">
@@ -289,8 +289,8 @@ export default function PlantDetail() {
           {/* Plant Info Card */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Plant Details</CardTitle>
-              <CardDescription>Information about this plant</CardDescription>
+              <CardTitle className="text-lg">{plant.nickname}</CardTitle>
+              <CardDescription>{getSpeciesName(plant.species_id)}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
