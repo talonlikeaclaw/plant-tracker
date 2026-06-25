@@ -52,6 +52,7 @@ export default function Register() {
         password: form.password,
       });
       localStorage.setItem("token", data.access_token);
+      localStorage.setItem("refresh_token", data.refresh_token);
       // Use window.location to force full page reload and re-evaluate auth state
       window.location.href = "/dashboard";
     } catch (err: any) {

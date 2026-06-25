@@ -1,4 +1,5 @@
 import os
+from datetime import timedelta
 
 from dotenv import load_dotenv
 
@@ -24,6 +25,10 @@ class Config:
         raise ValueError(
             "JWT_SECRET_KEY environment variable is not set. This is required for secure JWT operations."
         )
+
+    # JWT token configuration
+    JWT_ACCESS_TOKEN_EXPIRES = timedelta(hours=1)
+    JWT_REFRESH_TOKEN_EXPIRES = timedelta(days=30)
 
     # Photo uploads
     UPLOAD_FOLDER = os.getenv("UPLOAD_FOLDER", "/app/uploads")

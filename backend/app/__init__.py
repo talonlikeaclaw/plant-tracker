@@ -13,6 +13,8 @@ def create_app():
     app = Flask(__name__, static_folder="static", static_url_path="/static")
     app.config.from_object("config.Config")
     app.config["MAX_CONTENT_LENGTH"] = Config.MAX_UPLOAD_SIZE
+    app.config["JWT_ACCESS_TOKEN_EXPIRES"] = Config.JWT_ACCESS_TOKEN_EXPIRES
+    app.config["JWT_REFRESH_TOKEN_EXPIRES"] = Config.JWT_REFRESH_TOKEN_EXPIRES
     CORS(
         app,
         supports_credentials=True,

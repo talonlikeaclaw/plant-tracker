@@ -29,12 +29,13 @@ export default function Login() {
 
     setLoading(true);
     try {
-      // Call API to login user and store JWT token then redirect
+      // Call API to login user and store JWT tokens then redirect
       const data = await loginUser({ email, password });
       localStorage.setItem("token", data.access_token);
+      localStorage.setItem("refresh_token", data.refresh_token);
       // Use window.location to force full page reload and re-evaluate auth state
       window.location.href = "/dashboard";
-    } catch (err) {
+    } catch {
       setError("Invalid email or password.");
       setLoading(false);
     }
