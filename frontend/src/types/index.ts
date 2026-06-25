@@ -57,6 +57,7 @@ export type UpcomingCareLog = {
   note?: string;
   due_date: string;
   days_until_due: number;
+  cover_photo_id?: number | null;
 };
 
 // Species
