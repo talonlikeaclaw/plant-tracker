@@ -95,3 +95,21 @@ export function getSpeciesName(
   const s = species.find((sp) => sp.id === speciesId);
   return s?.common_name || "Unknown species";
 }
+
+/**
+ * Extract a human-readable message from a caught error, preferring an API
+ * response `error`/`message` field.
+ *
+ * Falls back to the provided string.
+ */
+export function getErrorMessage(err: unknown, fallback: string): string {
+  if (err && typeof err === "object" && "response" in err) {
+    const data = (
+      err as { response?: { data?: { error?: string; message?: string } } }
+    ).response?.data;
+    if (data?.error) return data.error;
+    if (data?.message) return data.message;
+  }
+  if (err instanceof Error) return err.message;
+  return fallback;
+}
