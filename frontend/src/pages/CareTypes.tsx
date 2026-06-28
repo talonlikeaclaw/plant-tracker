@@ -1,6 +1,5 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Trash2Icon, PencilIcon, AlertCircleIcon } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -11,61 +10,39 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import {
-  getDefaultCareTypes,
-  getUserCareTypes,
-  createCareType,
-  updateCareType,
-  deleteCareType,
-} from "@/api/careTypes";
+import { PageLayout } from "@/components/layout/page-layout";
+import { StatusAlerts } from "@/components/feedback/status-alerts";
+import { LoadingState } from "@/components/feedback/loading-state";
+import { EmptyState } from "@/components/feedback/empty-state";
+import { ConfirmDialog } from "@/components/feedback/confirm-dialog";
+import { CareTypeCard } from "@/components/care/care-type-card";
+import { EditCareTypeDialog } from "@/components/care/edit-care-type-dialog";
+import { useCareTypes } from "@/hooks/use-care-types";
+import { useAlerts } from "@/hooks/use-alerts";
+import { getErrorMessage } from "@/lib/utils";
+import { createCareType, deleteCareType } from "@/api/careTypes";
 import type { CareType } from "@/types";
 
 export default function CareTypes() {
   const navigate = useNavigate();
-  const [defaultCareTypes, setDefaultCareTypes] = useState<CareType[]>([]);
-  const [userCareTypes, setUserCareTypes] = useState<CareType[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const {
+    defaultCareTypes,
+    userCareTypes,
+    loading,
+    error: loadError,
+    reload,
+  } = useCareTypes();
+  const { success, error, setSuccess, setError } = useAlerts();
+
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingType, setEditingType] = useState<CareType | null>(null);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [typeToDelete, setTypeToDelete] = useState<CareType | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
-  // Form states
+  // Add form state
   const [formName, setFormName] = useState("");
   const [formDesc, setFormDesc] = useState("");
   const [formLoading, setFormLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
-
-  const loadCareTypes = async () => {
-    try {
-      const [defaultRes, userRes] = await Promise.all([
-        getDefaultCareTypes(),
-        getUserCareTypes().catch(() => ({ care_types: [] })),
-      ]);
-
-      setDefaultCareTypes(defaultRes.care_types ?? []);
-      setUserCareTypes(userRes.care_types ?? []);
-    } catch (err) {
-      console.error("Failed to load care types:", err);
-      setError("Failed to load care types");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    loadCareTypes();
-  }, []);
 
   const handleAdd = async () => {
     if (!formName) {
@@ -76,45 +53,14 @@ export default function CareTypes() {
     setFormLoading(true);
     setError("");
     try {
-      await createCareType({
-        name: formName,
-        description: formDesc,
-      });
-
+      await createCareType({ name: formName, description: formDesc });
       setSuccess("Care type added successfully!");
       setFormName("");
       setFormDesc("");
       setShowAddForm(false);
-      loadCareTypes();
-    } catch (err: any) {
-      setError(
-        err.response?.data?.error || "Failed to create care type"
-      );
-    } finally {
-      setFormLoading(false);
-    }
-  };
-
-  const handleEdit = async () => {
-    if (!editingType || !formName) return;
-
-    setFormLoading(true);
-    setError("");
-    try {
-      await updateCareType(editingType.id, {
-        name: formName,
-        description: formDesc,
-      });
-
-      setSuccess("Care type updated successfully!");
-      setFormName("");
-      setFormDesc("");
-      setEditingType(null);
-      loadCareTypes();
-    } catch (err: any) {
-      setError(
-        err.response?.data?.error || "Failed to update care type"
-      );
+      reload();
+    } catch (err) {
+      setError(getErrorMessage(err, "Failed to create care type"));
     } finally {
       setFormLoading(false);
     }
@@ -130,314 +76,176 @@ export default function CareTypes() {
       setSuccess("Care type deleted successfully!");
       setDeleteDialogOpen(false);
       setTypeToDelete(null);
-      loadCareTypes();
-    } catch (err: any) {
-      setError(
-        err.response?.data?.error || "Failed to delete care type"
-      );
+      reload();
+    } catch (err) {
+      setError(getErrorMessage(err, "Failed to delete care type"));
     } finally {
       setFormLoading(false);
     }
   };
 
-  const openEditDialog = (careType: CareType) => {
-    setEditingType(careType);
-    setFormName(careType.name);
-    setFormDesc(careType.description || "");
-  };
-
-  const closeEditDialog = () => {
-    setEditingType(null);
-    setFormName("");
-    setFormDesc("");
-  };
-
-  const openDeleteDialog = (careType: CareType) => {
-    setTypeToDelete(careType);
-    setDeleteDialogOpen(true);
-  };
-
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b">
-        <div className="container mx-auto px-4 py-4">
+    <PageLayout
+      title="Care Types"
+      subtitle="Manage your plant care activity types"
+      maxWidth="4xl"
+      contentClassName="space-y-8"
+      headerActions={
+        <Button
+          variant="outline"
+          onClick={() => navigate("/dashboard")}
+          className="shrink-0 w-full sm:w-auto"
+        >
+          Back to Dashboard
+        </Button>
+      }
+    >
+      <StatusAlerts success={success} error={error || loadError} />
+
+      {/* Add Custom Care Type */}
+      <Card>
+        <CardHeader>
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="flex-1 min-w-0">
-              <h1 className="text-xl sm:text-2xl font-bold text-foreground truncate">
-                Care Types
-              </h1>
-              <p className="text-sm text-muted-foreground mt-1 hidden sm:block">
-                Manage your plant care activity types
-              </p>
+              <CardTitle className="truncate">Add Custom Care Type</CardTitle>
+              <CardDescription className="hidden sm:block">
+                Create your own care activity types
+              </CardDescription>
             </div>
             <Button
-              variant="outline"
-              onClick={() => navigate("/dashboard")}
+              variant={showAddForm ? "outline" : "default"}
+              onClick={() => setShowAddForm(!showAddForm)}
               className="shrink-0 w-full sm:w-auto"
             >
-              Back to Dashboard
+              {showAddForm ? "Hide Form" : "Add Custom Type"}
             </Button>
           </div>
-        </div>
-      </header>
+        </CardHeader>
+        {showAddForm && (
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="name">Name</Label>
+              <Input
+                id="name"
+                value={formName}
+                onChange={(e) => setFormName(e.target.value)}
+                placeholder="e.g., Pruning, Misting, Repotting"
+                disabled={formLoading}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="description">Description (Optional)</Label>
+              <Input
+                id="description"
+                value={formDesc}
+                onChange={(e) => setFormDesc(e.target.value)}
+                placeholder="Brief description"
+                disabled={formLoading}
+              />
+            </div>
+            <div className="flex gap-3">
+              <Button
+                onClick={handleAdd}
+                disabled={formLoading || !formName}
+                className="flex-1"
+              >
+                {formLoading ? "Adding..." : "Add Care Type"}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => setShowAddForm(false)}
+                disabled={formLoading}
+              >
+                Cancel
+              </Button>
+            </div>
+          </CardContent>
+        )}
+      </Card>
 
-      {/* Main Content */}
-      <main className="container mx-auto px-4 py-8">
-        <div className="max-w-4xl mx-auto space-y-8">
-          {/* Success/Error Messages */}
-          {success && (
-            <Alert className="bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-800">
-              <AlertDescription className="text-green-800 dark:text-green-200">
-                {success}
-              </AlertDescription>
-            </Alert>
-          )}
-          {error && (
-            <Alert variant="destructive">
-              <AlertCircleIcon className="h-4 w-4" />
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
-
-          {/* Add Custom Care Type */}
-          <Card>
-            <CardHeader>
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div className="flex-1 min-w-0">
-                  <CardTitle className="truncate">Add Custom Care Type</CardTitle>
-                  <CardDescription className="hidden sm:block">
-                    Create your own care activity types
-                  </CardDescription>
-                </div>
-                <Button
-                  variant={showAddForm ? "outline" : "default"}
-                  onClick={() => setShowAddForm(!showAddForm)}
-                  className="shrink-0 w-full sm:w-auto"
-                >
-                  {showAddForm ? "Hide Form" : "Add Custom Type"}
-                </Button>
-              </div>
-            </CardHeader>
-            {showAddForm && (
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Name</Label>
-                  <Input
-                    id="name"
-                    value={formName}
-                    onChange={(e) => setFormName(e.target.value)}
-                    placeholder="e.g., Pruning, Misting, Repotting"
-                    disabled={formLoading}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="description">Description (Optional)</Label>
-                  <Input
-                    id="description"
-                    value={formDesc}
-                    onChange={(e) => setFormDesc(e.target.value)}
-                    placeholder="Brief description"
-                    disabled={formLoading}
-                  />
-                </div>
-                <div className="flex gap-3">
-                  <Button
-                    onClick={handleAdd}
-                    disabled={formLoading || !formName}
-                    className="flex-1"
-                  >
-                    {formLoading ? "Adding..." : "Add Care Type"}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => setShowAddForm(false)}
-                    disabled={formLoading}
-                  >
-                    Cancel
-                  </Button>
-                </div>
-              </CardContent>
-            )}
-          </Card>
-
-          {/* Your Custom Care Types */}
-          <div>
-            <h2 className="text-xl font-semibold mb-4">
-              Your Custom Types ({userCareTypes.length})
-            </h2>
-            {isLoading ? (
-              <Card>
-                <CardContent>
-                  <p className="text-muted-foreground py-8 text-center">
-                    Loading...
-                  </p>
-                </CardContent>
-              </Card>
-            ) : userCareTypes.length === 0 ? (
-              <Card>
-                <CardContent>
-                  <p className="text-muted-foreground py-8 text-center">
-                    No custom care types yet. Create one above!
-                  </p>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {userCareTypes.map((type) => (
-                  <Card key={type.id}>
-                    <CardHeader>
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <CardTitle className="text-lg">{type.name}</CardTitle>
-                          {type.description && (
-                            <CardDescription>{type.description}</CardDescription>
-                          )}
-                        </div>
-                        <div className="flex gap-2">
-                          {/* Edit Dialog */}
-                          <Dialog
-                            open={editingType?.id === type.id}
-                            onOpenChange={(open) => {
-                              if (!open) closeEditDialog();
-                            }}
-                          >
-                            <DialogTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => openEditDialog(type)}
-                              >
-                                <PencilIcon className="h-4 w-4" />
-                              </Button>
-                            </DialogTrigger>
-                            <DialogContent>
-                              <DialogHeader>
-                                <DialogTitle>Edit Care Type</DialogTitle>
-                                <DialogDescription>
-                                  Update the name and description
-                                </DialogDescription>
-                              </DialogHeader>
-                              <div className="space-y-4">
-                                <div className="space-y-2">
-                                  <Label htmlFor="edit-name">Name</Label>
-                                  <Input
-                                    id="edit-name"
-                                    value={formName}
-                                    onChange={(e) => setFormName(e.target.value)}
-                                    disabled={formLoading}
-                                  />
-                                </div>
-                                <div className="space-y-2">
-                                  <Label htmlFor="edit-desc">Description</Label>
-                                  <Input
-                                    id="edit-desc"
-                                    value={formDesc}
-                                    onChange={(e) => setFormDesc(e.target.value)}
-                                    disabled={formLoading}
-                                  />
-                                </div>
-                                <div className="flex gap-3">
-                                  <Button
-                                    onClick={handleEdit}
-                                    disabled={formLoading || !formName}
-                                    className="flex-1"
-                                  >
-                                    {formLoading ? "Saving..." : "Save Changes"}
-                                  </Button>
-                                  <Button
-                                    variant="outline"
-                                    onClick={closeEditDialog}
-                                    disabled={formLoading}
-                                  >
-                                    Cancel
-                                  </Button>
-                                </div>
-                              </div>
-                            </DialogContent>
-                          </Dialog>
-
-                          {/* Delete Button */}
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => openDeleteDialog(type)}
-                          >
-                            <Trash2Icon className="h-4 w-4 text-destructive" />
-                          </Button>
-                        </div>
-                      </div>
-                    </CardHeader>
-                  </Card>
-                ))}
-              </div>
-            )}
+      {/* Your Custom Care Types */}
+      <div>
+        <h2 className="text-xl font-semibold mb-4">
+          Your Custom Types ({userCareTypes.length})
+        </h2>
+        {loading ? (
+          <LoadingState />
+        ) : userCareTypes.length === 0 ? (
+          <EmptyState message="No custom care types yet. Create one above!" />
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {userCareTypes.map((type) => (
+              <CareTypeCard
+                key={type.id}
+                careType={type}
+                onEdit={setEditingType}
+                onDelete={(ct) => {
+                  setTypeToDelete(ct);
+                  setDeleteDialogOpen(true);
+                }}
+              />
+            ))}
           </div>
+        )}
+      </div>
 
-          {/* System Default Care Types */}
-          <div>
-            <h2 className="text-xl font-semibold mb-4">
-              System Default Types ({defaultCareTypes.length})
-            </h2>
-            <p className="text-sm text-muted-foreground mb-4">
-              These are standard care types available to all users and cannot be
-              edited or deleted.
-            </p>
-            {isLoading ? (
-              <Card>
-                <CardContent>
-                  <p className="text-muted-foreground py-8 text-center">
-                    Loading...
-                  </p>
-                </CardContent>
+      {/* System Default Care Types */}
+      <div>
+        <h2 className="text-xl font-semibold mb-4">
+          System Default Types ({defaultCareTypes.length})
+        </h2>
+        <p className="text-sm text-muted-foreground mb-4">
+          These are standard care types available to all users and cannot be
+          edited or deleted.
+        </p>
+        {loading ? (
+          <LoadingState />
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {defaultCareTypes.map((type) => (
+              <Card key={type.id} className="bg-muted/30">
+                <CardHeader>
+                  <CardTitle className="text-lg">{type.name}</CardTitle>
+                  {type.description && (
+                    <CardDescription>{type.description}</CardDescription>
+                  )}
+                </CardHeader>
               </Card>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {defaultCareTypes.map((type) => (
-                  <Card key={type.id} className="bg-muted/30">
-                    <CardHeader>
-                      <CardTitle className="text-lg">{type.name}</CardTitle>
-                      {type.description && (
-                        <CardDescription>{type.description}</CardDescription>
-                      )}
-                    </CardHeader>
-                  </Card>
-                ))}
-              </div>
-            )}
+            ))}
           </div>
+        )}
+      </div>
 
-          {/* Delete Confirmation Dialog */}
-          <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Delete Care Type</DialogTitle>
-                <DialogDescription>
-                  Are you sure you want to delete "{typeToDelete?.name}"? This
-                  will also delete all associated care plans and care logs. This
-                  action cannot be undone.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="flex gap-3 justify-end">
-                <Button
-                  variant="outline"
-                  onClick={() => setDeleteDialogOpen(false)}
-                  disabled={formLoading}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  variant="destructive"
-                  onClick={handleDelete}
-                  disabled={formLoading}
-                >
-                  {formLoading ? "Deleting..." : "Delete"}
-                </Button>
-              </div>
-            </DialogContent>
-          </Dialog>
-        </div>
-      </main>
-    </div>
+      {/* Edit Dialog */}
+      <EditCareTypeDialog
+        careType={editingType}
+        open={editingType !== null}
+        onOpenChange={(open) => {
+          if (!open) setEditingType(null);
+        }}
+        onSuccess={() => {
+          setSuccess("Care type updated successfully!");
+          reload();
+        }}
+      />
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        title="Delete Care Type"
+        description={
+          <>
+            Are you sure you want to delete &quot;{typeToDelete?.name}&quot;?
+            This will also delete all associated care plans and care logs. This
+            action cannot be undone.
+          </>
+        }
+        confirmLabel="Delete"
+        loading={formLoading}
+        onConfirm={handleDelete}
+        error={error}
+      />
+    </PageLayout>
   );
 }

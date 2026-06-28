@@ -1,39 +1,27 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { CheckCircle2Icon, AlertCircleIcon, LeafIcon } from "lucide-react";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { ModeToggle } from "@/components/mode-toggle";
-import { UserMenu } from "@/components/user-menu";
-import { AuthImage } from "@/components/auth-image";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { format } from "date-fns";
+import { Card, CardContent } from "@/components/ui/card";
+import { ModeToggle } from "@/components/theme/mode-toggle";
+import { UserMenu } from "@/components/layout/user-menu";
+import { PageLayout } from "@/components/layout/page-layout";
+import { StatusAlerts } from "@/components/feedback/status-alerts";
+import { QuickActions } from "@/components/dashboard/quick-actions";
+import { StatCard } from "@/components/dashboard/stat-card";
+import { UpcomingCareCard } from "@/components/dashboard/upcoming-care-card";
+import { MarkAsDoneDialog } from "@/components/dashboard/mark-as-done-dialog";
 import {
   getUserPlants,
   getUpcomingCareLogs,
   getPastCareLogs,
 } from "@/api/dashboard";
 import { createCareLog } from "@/api/careLogs";
+import { useAlerts } from "@/hooks/use-alerts";
 import type { Plant, CareLog, UpcomingCareLog } from "@/types";
-import { parseLocalDate } from "@/lib/utils";
-import { cn } from "@/lib/utils";
+import { getTodayLocal, getErrorMessage } from "@/lib/utils";
 
 export default function Dashboard() {
   const navigate = useNavigate();
+  const { success, error, setSuccess, setError } = useAlerts();
   const [plants, setPlants] = useState<Plant[]>([]);
   const [upcomingLogs, setUpcomingLogs] = useState<UpcomingCareLog[]>([]);
   const [careLogs, setCareLogs] = useState<CareLog[]>([]);
@@ -43,8 +31,6 @@ export default function Dashboard() {
     null,
   );
   const [completing, setCompleting] = useState(false);
-  const [success, setSuccess] = useState("");
-  const [error, setError] = useState("");
 
   const loadDashboard = async () => {
     try {
@@ -78,21 +64,12 @@ export default function Dashboard() {
 
     setCompleting(true);
     setError("");
-    setSuccess("");
 
     try {
-      // Create the care log with today's date (in local timezone)
-      const today = new Date();
-      const localDate = new Date(
-        today.getTime() - today.getTimezoneOffset() * 60000,
-      )
-        .toISOString()
-        .split("T")[0];
-
       await createCareLog({
         plant_id: logToComplete.plant_id,
         care_type_id: logToComplete.care_type_id,
-        care_date: localDate,
+        care_date: getTodayLocal(),
         note: logToComplete.note || undefined,
       });
 
@@ -104,11 +81,10 @@ export default function Dashboard() {
 
       // Reload dashboard data
       loadDashboard();
-    } catch (err: any) {
+    } catch (err) {
       console.error(err);
       setError(
-        err.response?.data?.error ||
-          "Failed to mark as done. Please try again.",
+        getErrorMessage(err, "Failed to mark as done. Please try again."),
       );
     } finally {
       setCompleting(false);
@@ -116,366 +92,103 @@ export default function Dashboard() {
   };
 
   const speciesCount = new Set(plants.map((p) => p.species_id)).size;
-
-  const getUrgencyInfo = (daysUntilDue: number) => {
-    if (daysUntilDue < 0) {
-      return {
-        label: "Overdue",
-        variant: "destructive" as const,
-        className:
-          "border-destructive/50 bg-destructive text-destructive-foreground",
-      };
-    }
-    if (daysUntilDue === 0) {
-      return {
-        label: "Due Today",
-        variant: "warning" as const,
-        className:
-          "border-yellow-600/50 bg-yellow-500 text-white dark:bg-yellow-600 dark:text-white",
-      };
-    }
-    return {
-      label: `Due in ${daysUntilDue} day${daysUntilDue > 1 ? "s" : ""}`,
-      variant: "success" as const,
-      className:
-        "border-green-600/50 bg-green-500 text-white dark:bg-green-600 dark:text-white",
-    };
-  };
+  const dueSoonLogs = upcomingLogs.filter((log) => log.days_until_due <= 3);
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="flex-1 min-w-0">
-              <h1 className="text-2xl sm:text-3xl font-bold text-foreground truncate">
-                Plant Tracker
-              </h1>
-              <p className="text-sm text-muted-foreground mt-1 hidden sm:block">
-                Welcome back! Here's what's happening with your plants.
+    <PageLayout
+      title="Plant Tracker"
+      subtitle="Welcome back! Here's what's happening with your plants."
+      titleClassName="text-2xl sm:text-3xl font-bold text-foreground truncate"
+      subtitleClassName="text-sm text-muted-foreground mt-1"
+      maxWidth="none"
+      contentClassName="space-y-8"
+      actionsClassName="flex gap-2 shrink-0"
+      headerActions={
+        <>
+          <ModeToggle />
+          <UserMenu />
+        </>
+      }
+    >
+      {/* Success/Error Messages */}
+      <StatusAlerts success={success} error={error} />
+
+      <QuickActions onNavigate={navigate} />
+
+      {/* Upcoming Care */}
+      <section>
+        <h2 className="text-2xl font-semibold mb-4">
+          Upcoming Care (Next 3 Days)
+        </h2>
+        {isLoading ? (
+          <Card>
+            <CardContent>
+              <p className="text-muted-foreground">Loading care schedule...</p>
+            </CardContent>
+          </Card>
+        ) : dueSoonLogs.length === 0 ? (
+          <Card>
+            <CardContent>
+              <p className="text-muted-foreground">
+                No upcoming care tasks in the next 3 days. Your plants are all
+                set!
               </p>
-            </div>
-            <div className="flex gap-2 shrink-0">
-              <ModeToggle />
-              <UserMenu />
-            </div>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="space-y-3">
+            {dueSoonLogs.map((log) => (
+              <UpcomingCareCard
+                key={`${log.plant_id}-${log.care_type}-${log.due_date}`}
+                log={log}
+                onNavigatePlant={(plantId) => navigate(`/plants/${plantId}`)}
+                onMarkDone={openConfirmDialog}
+              />
+            ))}
           </div>
+        )}
+      </section>
+
+      {/* Stats Grid */}
+      <section>
+        <h2 className="text-2xl font-semibold mb-4">At a Glance</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <StatCard
+            title="Total Plants"
+            description="Plants in your collection"
+            value={plants.length}
+            loading={isLoading}
+          />
+          <StatCard
+            title="Species Tracked"
+            description="Unique species varieties"
+            value={speciesCount}
+            loading={isLoading}
+          />
+          <StatCard
+            title="Upcoming Tasks"
+            description="Care activities due soon"
+            value={upcomingLogs.length}
+            loading={isLoading}
+          />
+          <StatCard
+            title="Care History"
+            description="Total logged activities"
+            value={careLogs.length}
+            loading={isLoading}
+          />
         </div>
-      </header>
+      </section>
 
-      {/* Main Content */}
-      <main className="container mx-auto px-4 py-8 space-y-8">
-        {/* Success/Error Messages */}
-        {success && (
-          <Alert className="bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-800">
-            <CheckCircle2Icon className="h-4 w-4 text-green-600 dark:text-green-400" />
-            <AlertDescription className="text-green-800 dark:text-green-200">
-              {success}
-            </AlertDescription>
-          </Alert>
-        )}
-        {error && (
-          <Alert variant="destructive">
-            <AlertCircleIcon className="h-4 w-4" />
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
-        {/* Quick Actions */}
-        <section>
-          <h2 className="text-2xl font-semibold mb-4">Quick Actions</h2>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-            <Button
-              variant="default"
-              className="w-full"
-              onClick={() => navigate("/plants")}
-            >
-              Your Plants
-            </Button>
-            <Button
-              variant="default"
-              className="w-full"
-              onClick={() => navigate("/plants/add")}
-            >
-              Add Plant
-            </Button>
-            <Button
-              variant="default"
-              className="w-full"
-              onClick={() => navigate("/species")}
-            >
-              Species
-            </Button>
-            <Button
-              variant="default"
-              className="w-full"
-              onClick={() => navigate("/log-care")}
-            >
-              Log Care
-            </Button>
-            <Button
-              variant="default"
-              className="w-full"
-              onClick={() => navigate("/care-plans")}
-            >
-              Care Plans
-            </Button>
-            <Button
-              variant="default"
-              className="w-full"
-              onClick={() => navigate("/care-types")}
-            >
-              Care Types
-            </Button>
-          </div>
-        </section>
-
-        {/* Upcoming Care */}
-        <section>
-          <h2 className="text-2xl font-semibold mb-4">
-            Upcoming Care (Next 3 Days)
-          </h2>
-          {isLoading ? (
-            <Card>
-              <CardContent>
-                <p className="text-muted-foreground">
-                  Loading care schedule...
-                </p>
-              </CardContent>
-            </Card>
-          ) : upcomingLogs.filter((log) => log.days_until_due <= 3).length ===
-            0 ? (
-            <Card>
-              <CardContent>
-                <p className="text-muted-foreground">
-                  No upcoming care tasks in the next 3 days. Your plants are all
-                  set!
-                </p>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="space-y-3">
-              {upcomingLogs
-                .filter((log) => log.days_until_due <= 3)
-                .map((log) => {
-                  const urgency = getUrgencyInfo(log.days_until_due);
-                  return (
-                    <Card
-                      key={`${log.plant_id}-${log.care_type}-${log.due_date}`}
-                      className={cn(
-                        "transition-all",
-                        log.days_until_due < 0 &&
-                          "border-destructive/50 bg-destructive/5",
-                        log.days_until_due === 0 &&
-                          "border-yellow-600/50 bg-yellow-500/5",
-                      )}
-                    >
-                      <CardHeader>
-                        <div className="flex items-start justify-between gap-4">
-                          {/* Thumbnail on the left */}
-                          <button
-                            type="button"
-                            onClick={() => navigate(`/plants/${log.plant_id}`)}
-                            className="shrink-0"
-                            aria-label={`View ${log.plant_nickname}`}
-                          >
-                            {log.cover_photo_id ? (
-                              <AuthImage
-                                photoId={log.cover_photo_id}
-                                thumb
-                                className="h-20 w-20 rounded-lg object-cover hover:opacity-80 transition-opacity"
-                              />
-                            ) : (
-                              <div className="h-20 w-20 rounded-lg bg-muted flex items-center justify-center">
-                                <LeafIcon className="h-8 w-8 text-muted-foreground" />
-                              </div>
-                            )}
-                          </button>
-
-                          {/* Plant info and urgency badge on the right */}
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-start gap-2 mb-1">
-                              {/* Urgency badge */}
-                              <Badge variant={urgency.variant}>
-                                {urgency.label}
-                              </Badge>
-                            </div>
-
-                            {/* Clickable plant name */}
-                            <button
-                              type="button"
-                              onClick={() =>
-                                navigate(`/plants/${log.plant_id}`)
-                              }
-                              className="text-left w-full"
-                            >
-                              <CardTitle className="text-lg hover:text-primary transition-colors">
-                                {log.plant_nickname}
-                              </CardTitle>
-                            </button>
-                            <CardDescription>
-                              {log.care_type} &middot; Due{" "}
-                              {isNaN(new Date(log.due_date).getTime())
-                                ? "Invalid date"
-                                : format(parseLocalDate(log.due_date), "PPP")}
-                            </CardDescription>
-                          </div>
-
-                          {/* Mark Done button */}
-                          <Button
-                            size="sm"
-                            onClick={() => openConfirmDialog(log)}
-                            variant={
-                              log.days_until_due < 0
-                                ? "destructive"
-                                : log.days_until_due === 0
-                                  ? "warning"
-                                  : "default"
-                            }
-                          >
-                            Mark Done
-                          </Button>
-                        </div>
-                      </CardHeader>
-                      {log.note && (
-                        <CardContent>
-                          <p className="text-sm text-muted-foreground italic">
-                            Note: {log.note}
-                          </p>
-                        </CardContent>
-                      )}
-                    </Card>
-                  );
-                })}
-            </div>
-          )}
-        </section>
-
-        {/* Stats Grid */}
-        <section>
-          <h2 className="text-2xl font-semibold mb-4">At a Glance</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Total Plants</CardTitle>
-                <CardDescription>Plants in your collection</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {isLoading ? (
-                  <p className="text-2xl font-bold text-muted-foreground">
-                    Loading...
-                  </p>
-                ) : (
-                  <p className="text-3xl font-bold">{plants.length}</p>
-                )}
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Species Tracked</CardTitle>
-                <CardDescription>Unique species varieties</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {isLoading ? (
-                  <p className="text-2xl font-bold text-muted-foreground">
-                    Loading...
-                  </p>
-                ) : (
-                  <p className="text-3xl font-bold">{speciesCount}</p>
-                )}
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Upcoming Tasks</CardTitle>
-                <CardDescription>Care activities due soon</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {isLoading ? (
-                  <p className="text-2xl font-bold text-muted-foreground">
-                    Loading...
-                  </p>
-                ) : (
-                  <p className="text-3xl font-bold">{upcomingLogs.length}</p>
-                )}
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Care History</CardTitle>
-                <CardDescription>Total logged activities</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {isLoading ? (
-                  <p className="text-2xl font-bold text-muted-foreground">
-                    Loading...
-                  </p>
-                ) : (
-                  <p className="text-3xl font-bold">{careLogs.length}</p>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-        </section>
-
-        {/* Mark as Done Confirmation Dialog */}
-        <Dialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Mark Care as Complete</DialogTitle>
-              <DialogDescription>
-                Are you sure you want to mark this care activity as done?
-              </DialogDescription>
-            </DialogHeader>
-            {logToComplete && (
-              <div className="space-y-2 py-4">
-                <div className="text-sm">
-                  <span className="font-medium">Plant:</span>{" "}
-                  {logToComplete.plant_nickname}
-                </div>
-                <div className="text-sm">
-                  <span className="font-medium">Care Type:</span>{" "}
-                  {logToComplete.care_type}
-                </div>
-                <div className="text-sm">
-                  <span className="font-medium">Due Date:</span>{" "}
-                  {format(parseLocalDate(logToComplete.due_date), "PPP")}
-                </div>
-                {logToComplete.note && (
-                  <div className="text-sm">
-                    <span className="font-medium">Note:</span>{" "}
-                    {logToComplete.note}
-                  </div>
-                )}
-                <div className="text-sm text-muted-foreground pt-2">
-                  This will be logged as completed today.
-                </div>
-              </div>
-            )}
-            {error && (
-              <Alert variant="destructive">
-                <AlertCircleIcon className="h-4 w-4" />
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            )}
-            <div className="flex gap-3 justify-end">
-              <Button
-                variant="outline"
-                onClick={() => setConfirmDialogOpen(false)}
-                disabled={completing}
-              >
-                Cancel
-              </Button>
-              <Button onClick={handleMarkAsDone} disabled={completing}>
-                {completing ? "Marking..." : "Mark as Done"}
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
-      </main>
-    </div>
+      {/* Mark as Done Confirmation Dialog */}
+      <MarkAsDoneDialog
+        log={logToComplete}
+        open={confirmDialogOpen}
+        onOpenChange={setConfirmDialogOpen}
+        loading={completing}
+        error={error}
+        onConfirm={handleMarkAsDone}
+      />
+    </PageLayout>
   );
 }

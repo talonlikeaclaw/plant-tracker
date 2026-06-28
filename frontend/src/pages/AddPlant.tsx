@@ -1,8 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import {
-  AlertCircleIcon,
-  CheckCircle2Icon,
   PlusCircleIcon,
   CameraIcon,
   UploadCloudIcon,
@@ -19,13 +17,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -33,13 +24,15 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { PageLayout } from "@/components/layout/page-layout";
+import { SuccessAlert, ErrorAlert } from "@/components/feedback/status-alerts";
+import { SpeciesSelect } from "@/components/forms/species-select";
 import { createPlant } from "@/api/plants";
 import { getAllSpecies } from "@/api/species";
 import { uploadPlantPhotos } from "@/api/photos";
-import SpeciesForm from "@/components/SpeciesForm";
+import SpeciesForm from "@/components/species/species-form";
 import type { Species } from "@/types";
-import { cn } from "@/lib/utils";
+import { cn, getErrorMessage } from "@/lib/utils";
 
 export default function AddPlant() {
   const navigate = useNavigate();
@@ -84,7 +77,7 @@ export default function AddPlant() {
       filesRef.current.forEach((f) => URL.revokeObjectURL(f.preview));
   }, []);
 
-  const handleSpeciesAdded = (newSpecies: any) => {
+  const handleSpeciesAdded = (newSpecies: Species) => {
     setDialogOpen(false);
     loadSpecies();
     // Auto-select the newly added species
@@ -164,7 +157,13 @@ export default function AddPlant() {
 
     try {
       // Phase 1: Create plant
-      const plantData: any = {
+      const plantData: {
+        nickname: string;
+        species_id?: number;
+        location?: string;
+        date_added?: string;
+        last_watered?: string;
+      } = {
         nickname: form.nickname,
       };
 
@@ -223,293 +222,244 @@ export default function AddPlant() {
       setTimeout(() => {
         navigate("/dashboard");
       }, 1500);
-    } catch (err: any) {
+    } catch (err) {
       console.error(err);
-      setError(
-        err.response?.data?.error ||
-          err.response?.data?.message ||
-          "Failed to add plant. Please try again.",
-      );
+      setError(getErrorMessage(err, "Failed to add plant. Please try again."));
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="flex-1 min-w-0">
-              <h1 className="text-xl sm:text-2xl font-bold text-foreground truncate">
-                Add New Plant
-              </h1>
-              <p className="text-sm text-muted-foreground mt-1 hidden sm:block">
-                Add a new plant to your collection
-              </p>
+    <PageLayout
+      title="Add New Plant"
+      subtitle="Add a new plant to your collection"
+      maxWidth="2xl"
+      contentClassName=""
+      headerActions={
+        <Button
+          variant="outline"
+          onClick={() => navigate("/dashboard")}
+          className="shrink-0 w-full sm:w-auto"
+        >
+          Back to Dashboard
+        </Button>
+      }
+    >
+      <Card>
+        <CardHeader>
+          <CardTitle>Plant Information</CardTitle>
+          <CardDescription>
+            Fill in the details about your new plant. Only the nickname is
+            required.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Nickname */}
+            <div className="space-y-2">
+              <Label htmlFor="nickname">
+                Nickname <span className="text-destructive">*</span>
+              </Label>
+              <Input
+                id="nickname"
+                name="nickname"
+                type="text"
+                placeholder="e.g., My Favorite Monstera"
+                value={form.nickname}
+                onChange={handleChange}
+                disabled={loading}
+                required
+              />
             </div>
-            <Button
-              variant="outline"
-              onClick={() => navigate("/dashboard")}
-              className="shrink-0 w-full sm:w-auto"
-            >
-              Back to Dashboard
-            </Button>
-          </div>
-        </div>
-      </header>
 
-      {/* Main Content */}
-      <main className="container mx-auto px-4 py-8">
-        <div className="max-w-2xl mx-auto">
-          <Card>
-            <CardHeader>
-              <CardTitle>Plant Information</CardTitle>
-              <CardDescription>
-                Fill in the details about your new plant. Only the nickname is
-                required.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-6">
-                {/* Nickname */}
-                <div className="space-y-2">
-                  <Label htmlFor="nickname">
-                    Nickname <span className="text-destructive">*</span>
-                  </Label>
-                  <Input
-                    id="nickname"
-                    name="nickname"
-                    type="text"
-                    placeholder="e.g., My Favorite Monstera"
-                    value={form.nickname}
-                    onChange={handleChange}
-                    disabled={loading}
-                    required
-                  />
-                </div>
-
-                {/* Species */}
-                <div className="space-y-2">
-                  <Label htmlFor="species_id">Species (Optional)</Label>
-                  <Select
-                    value={form.species_id}
-                    onValueChange={(value) =>
-                      setForm({ ...form, species_id: value })
-                    }
-                    disabled={loading}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a species" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {species.length === 0 ? (
-                        <SelectItem value="none" disabled>
-                          No species available
-                        </SelectItem>
-                      ) : (
-                        species.map((s) => (
-                          <SelectItem key={s.id} value={s.id.toString()}>
-                            {s.common_name}
-                            {s.scientific_name && ` (${s.scientific_name})`}
-                          </SelectItem>
-                        ))
-                      )}
-                    </SelectContent>
-                  </Select>
-                  <div className="flex items-center gap-2 pt-1">
-                    <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-                      <DialogTrigger asChild>
-                        <Button
-                          type="button"
-                          variant="link"
-                          size="sm"
-                          className="h-auto p-0 text-sm"
-                        >
-                          <PlusCircleIcon className="h-3 w-3 mr-1" />
-                          Quick add species
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent>
-                        <DialogHeader>
-                          <DialogTitle>Add New Species</DialogTitle>
-                          <DialogDescription>
-                            Add a new species to the community database
-                          </DialogDescription>
-                        </DialogHeader>
-                        <SpeciesForm
-                          onSuccess={handleSpeciesAdded}
-                          onCancel={() => setDialogOpen(false)}
-                          compact
-                        />
-                      </DialogContent>
-                    </Dialog>
-                    <span className="text-sm text-muted-foreground">or</span>
-                    <Link
-                      to="/species"
-                      target="_blank"
-                      className="text-sm text-primary hover:underline"
+            {/* Species */}
+            <div className="space-y-2">
+              <Label htmlFor="species_id">Species (Optional)</Label>
+              <SpeciesSelect
+                value={form.species_id}
+                onValueChange={(value) =>
+                  setForm({ ...form, species_id: value })
+                }
+                species={species}
+                disabled={loading}
+                showScientificName
+              />
+              <div className="flex items-center gap-2 pt-1">
+                <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="link"
+                      size="sm"
+                      className="h-auto p-0 text-sm"
                     >
-                      Browse all species
-                    </Link>
-                  </div>
-                </div>
-
-                {/* Location */}
-                <div className="space-y-2">
-                  <Label htmlFor="location">Location (Optional)</Label>
-                  <Input
-                    id="location"
-                    name="location"
-                    type="text"
-                    placeholder="e.g., Living room window"
-                    value={form.location}
-                    onChange={handleChange}
-                    disabled={loading}
-                  />
-                </div>
-
-                {/* Date Added */}
-                <div className="space-y-2">
-                  <Label htmlFor="date_added">Date Added (Optional)</Label>
-                  <Input
-                    id="date_added"
-                    name="date_added"
-                    type="date"
-                    value={form.date_added}
-                    onChange={handleChange}
-                    disabled={loading}
-                  />
-                </div>
-
-                {/* Last Watered */}
-                <div className="space-y-2">
-                  <Label htmlFor="last_watered">Last Watered (Optional)</Label>
-                  <Input
-                    id="last_watered"
-                    name="last_watered"
-                    type="date"
-                    value={form.last_watered}
-                    onChange={handleChange}
-                    disabled={loading}
-                  />
-                </div>
-
-                {/* Photo Upload Section */}
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2">
-                    <CameraIcon className="h-5 w-5 text-muted-foreground" />
-                    <Label>Plant Photos (Optional)</Label>
-                  </div>
-
-                  {/* Dropzone */}
-                  <div
-                    onClick={() =>
-                      !loading &&
-                      document.getElementById("photo-input")?.click()
-                    }
-                    className={cn(
-                      "flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed p-6 text-center transition-colors",
-                      loading
-                        ? "pointer-events-none opacity-50"
-                        : "border-muted-foreground/20 hover:border-muted-foreground/40",
-                    )}
-                  >
-                    <UploadCloudIcon className="mb-2 h-8 w-8 text-muted-foreground/50" />
-                    <p className="text-sm font-medium">
-                      Drag photos here or click to browse
-                    </p>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      JPG, PNG, WebP, HEIC · max 10MB each
-                    </p>
-                    <input
-                      id="photo-input"
-                      type="file"
-                      accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
-                      multiple
-                      className="hidden"
-                      disabled={loading}
-                      onChange={(e) => addFiles(e.target.files)}
+                      <PlusCircleIcon className="h-3 w-3 mr-1" />
+                      Quick add species
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Add New Species</DialogTitle>
+                      <DialogDescription>
+                        Add a new species to the community database
+                      </DialogDescription>
+                    </DialogHeader>
+                    <SpeciesForm
+                      onSuccess={handleSpeciesAdded}
+                      onCancel={() => setDialogOpen(false)}
+                      compact
                     />
+                  </DialogContent>
+                </Dialog>
+                <span className="text-sm text-muted-foreground">or</span>
+                <Link
+                  to="/species"
+                  target="_blank"
+                  className="text-sm text-primary hover:underline"
+                >
+                  Browse all species
+                </Link>
+              </div>
+            </div>
+
+            {/* Location */}
+            <div className="space-y-2">
+              <Label htmlFor="location">Location (Optional)</Label>
+              <Input
+                id="location"
+                name="location"
+                type="text"
+                placeholder="e.g., Living room window"
+                value={form.location}
+                onChange={handleChange}
+                disabled={loading}
+              />
+            </div>
+
+            {/* Date Added */}
+            <div className="space-y-2">
+              <Label htmlFor="date_added">Date Added (Optional)</Label>
+              <Input
+                id="date_added"
+                name="date_added"
+                type="date"
+                value={form.date_added}
+                onChange={handleChange}
+                disabled={loading}
+              />
+            </div>
+
+            {/* Last Watered */}
+            <div className="space-y-2">
+              <Label htmlFor="last_watered">Last Watered (Optional)</Label>
+              <Input
+                id="last_watered"
+                name="last_watered"
+                type="date"
+                value={form.last_watered}
+                onChange={handleChange}
+                disabled={loading}
+              />
+            </div>
+
+            {/* Photo Upload Section */}
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <CameraIcon className="h-5 w-5 text-muted-foreground" />
+                <Label>Plant Photos (Optional)</Label>
+              </div>
+
+              {/* Dropzone */}
+              <div
+                onClick={() =>
+                  !loading && document.getElementById("photo-input")?.click()
+                }
+                className={cn(
+                  "flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed p-6 text-center transition-colors",
+                  loading
+                    ? "pointer-events-none opacity-50"
+                    : "border-muted-foreground/20 hover:border-muted-foreground/40",
+                )}
+              >
+                <UploadCloudIcon className="mb-2 h-8 w-8 text-muted-foreground/50" />
+                <p className="text-sm font-medium">
+                  Drag photos here or click to browse
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  JPG, PNG, WebP, HEIC · max 10MB each
+                </p>
+                <input
+                  id="photo-input"
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
+                  multiple
+                  className="hidden"
+                  disabled={loading}
+                  onChange={(e) => addFiles(e.target.files)}
+                />
+              </div>
+
+              {/* Preview Grid */}
+              {selectedFiles.length > 0 && (
+                <>
+                  <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-5">
+                    {selectedFiles.map((item, idx) => (
+                      <div
+                        key={item.preview}
+                        className="group relative aspect-square overflow-hidden rounded-lg bg-muted"
+                      >
+                        <img
+                          src={item.preview}
+                          alt={item.file.name}
+                          className="h-full w-full object-cover"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => removeFile(idx)}
+                          disabled={loading}
+                          className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-destructive text-destructive-foreground opacity-0 transition-opacity hover:bg-destructive/90 group-hover:opacity-100 focus:opacity-100 focus:outline-none disabled:opacity-50"
+                        >
+                          <XIcon className="h-3 w-3" />
+                        </button>
+                      </div>
+                    ))}
                   </div>
 
-                  {/* Preview Grid */}
-                  {selectedFiles.length > 0 && (
-                    <>
-                      <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-5">
-                        {selectedFiles.map((item, idx) => (
-                          <div
-                            key={item.preview}
-                            className="group relative aspect-square overflow-hidden rounded-lg bg-muted"
-                          >
-                            <img
-                              src={item.preview}
-                              alt={item.file.name}
-                              className="h-full w-full object-cover"
-                            />
-                            <button
-                              type="button"
-                              onClick={() => removeFile(idx)}
-                              disabled={loading}
-                              className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-destructive text-destructive-foreground opacity-0 transition-opacity hover:bg-destructive/90 group-hover:opacity-100 focus:opacity-100 focus:outline-none disabled:opacity-50"
-                            >
-                              <XIcon className="h-3 w-3" />
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={clearFiles}
-                        disabled={loading}
-                      >
-                        Clear all photos
-                      </Button>
-                    </>
-                  )}
-                </div>
-
-                {/* Success Message */}
-                {success && (
-                  <Alert className="bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-800">
-                    <CheckCircle2Icon className="h-4 w-4 text-green-600 dark:text-green-400" />
-                    <AlertDescription className="text-green-800 dark:text-green-200">
-                      {success}
-                    </AlertDescription>
-                  </Alert>
-                )}
-
-                {/* Error Message */}
-                {error && (
-                  <Alert variant="destructive">
-                    <AlertCircleIcon className="h-4 w-4" />
-                    <AlertDescription>{error}</AlertDescription>
-                  </Alert>
-                )}
-
-                {/* Submit Button */}
-                <div className="flex gap-3">
-                  <Button type="submit" disabled={loading} className="flex-1">
-                    {loading ? "Adding Plant..." : "Add Plant"}
-                  </Button>
                   <Button
                     type="button"
-                    variant="outline"
-                    onClick={() => navigate("/dashboard")}
+                    variant="ghost"
+                    size="sm"
+                    onClick={clearFiles}
                     disabled={loading}
                   >
-                    Cancel
+                    Clear all photos
                   </Button>
-                </div>
-              </form>
-            </CardContent>
-          </Card>
-        </div>
-      </main>
-    </div>
+                </>
+              )}
+            </div>
+
+            {/* Success / Error Messages */}
+            {success && <SuccessAlert message={success} withIcon />}
+            {error && <ErrorAlert message={error} />}
+
+            {/* Submit Button */}
+            <div className="flex gap-3">
+              <Button type="submit" disabled={loading} className="flex-1">
+                {loading ? "Adding Plant..." : "Add Plant"}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => navigate("/dashboard")}
+                disabled={loading}
+              >
+                Cancel
+              </Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
+    </PageLayout>
   );
 }
