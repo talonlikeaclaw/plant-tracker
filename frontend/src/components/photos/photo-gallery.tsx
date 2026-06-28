@@ -6,7 +6,7 @@ import {
   ChevronDownIcon,
 } from "lucide-react";
 import { format } from "date-fns";
-import { AuthImage } from "@/components/auth-image";
+import { AuthImage } from "@/components/photos/auth-image";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -32,7 +32,8 @@ function getSourceLabel(source: PhotoSource): string {
   if (source.type === "plant") return "Plant photo";
   const parts: string[] = [];
   if (source.care_type) parts.push(source.care_type);
-  if (source.care_date) parts.push(format(parseLocalDate(source.care_date), "PP"));
+  if (source.care_date)
+    parts.push(format(parseLocalDate(source.care_date), "PP"));
   return parts.length > 0 ? parts.join(" · ") : "Care log";
 }
 
@@ -49,7 +50,7 @@ export function PhotoGallery({
       <div
         className={cn(
           "flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/20 p-8 text-center",
-          className
+          className,
         )}
       >
         <ImageIcon className="h-8 w-8 text-muted-foreground/40 mb-2" />
@@ -63,7 +64,7 @@ export function PhotoGallery({
       <div
         className={cn(
           "grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4",
-          className
+          className,
         )}
       >
         {photos.map((photo) => (

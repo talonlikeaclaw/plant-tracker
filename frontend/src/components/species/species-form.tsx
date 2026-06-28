@@ -5,9 +5,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { createSpecies } from "@/api/species";
+import { getErrorMessage } from "@/lib/utils";
+import type { Species } from "@/types";
 
 interface SpeciesFormProps {
-  onSuccess?: (species: any) => void;
+  onSuccess?: (species: Species) => void;
   onCancel?: () => void;
   compact?: boolean;
 }
@@ -44,11 +46,17 @@ export default function SpeciesForm({
 
     setLoading(true);
     try {
-      const speciesData: any = {
+      const speciesData: {
+        common_name: string;
+        scientific_name?: string;
+        sunlight?: string;
+        water_requirements?: string;
+      } = {
         common_name: form.common_name,
       };
 
-      if (form.scientific_name) speciesData.scientific_name = form.scientific_name;
+      if (form.scientific_name)
+        speciesData.scientific_name = form.scientific_name;
       if (form.sunlight) speciesData.sunlight = form.sunlight;
       if (form.water_requirements)
         speciesData.water_requirements = form.water_requirements;
@@ -70,12 +78,10 @@ export default function SpeciesForm({
           onSuccess(result.species);
         }, 500);
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error(err);
       setError(
-        err.response?.data?.error ||
-          err.response?.data?.message ||
-          "Failed to add species. Please try again."
+        getErrorMessage(err, "Failed to add species. Please try again."),
       );
     } finally {
       setLoading(false);
@@ -83,7 +89,10 @@ export default function SpeciesForm({
   };
 
   return (
-    <form onSubmit={handleSubmit} className={compact ? "space-y-4" : "space-y-6"}>
+    <form
+      onSubmit={handleSubmit}
+      className={compact ? "space-y-4" : "space-y-6"}
+    >
       {/* Common Name */}
       <div className="space-y-2">
         <Label htmlFor="common_name">

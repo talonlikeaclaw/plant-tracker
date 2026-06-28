@@ -3,7 +3,7 @@ import { DropletIcon, HistoryIcon } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { AuthImage } from "@/components/auth-image";
+import { AuthImage } from "@/components/photos/auth-image";
 import { parseLocalDate } from "@/lib/utils";
 import type { CareLog, CareType, PhotoWithSource } from "@/types";
 

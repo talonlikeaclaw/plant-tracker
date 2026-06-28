@@ -1,5 +1,5 @@
 import { format } from "date-fns";
-import { ConfirmDialog } from "@/components/confirm-dialog";
+import { ConfirmDialog } from "@/components/feedback/confirm-dialog";
 import { parseLocalDate } from "@/lib/utils";
 import type { UpcomingCareLog } from "@/types";
 

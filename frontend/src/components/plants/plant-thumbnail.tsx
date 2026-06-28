@@ -1,5 +1,5 @@
 import { LeafIcon } from "lucide-react";
-import { AuthImage } from "@/components/auth-image";
+import { AuthImage } from "@/components/photos/auth-image";
 import { cn } from "@/lib/utils";
 
 interface PlantThumbnailProps {
@@ -24,7 +24,14 @@ export function PlantThumbnail({
   alt = "",
 }: PlantThumbnailProps) {
   if (photoId) {
-    return <AuthImage photoId={photoId} thumb={thumb} className={className} alt={alt} />;
+    return (
+      <AuthImage
+        photoId={photoId}
+        thumb={thumb}
+        className={className}
+        alt={alt}
+      />
+    );
   }
   return (
     <div className={cn("bg-muted flex items-center justify-center", className)}>

@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { ErrorAlert } from "@/components/feedback/status-alerts";
 import { SpeciesSelect } from "@/components/forms/species-select";
 import { updatePlant } from "@/api/plants";
+import { getErrorMessage } from "@/lib/utils";
 import type { Plant, Species } from "@/types";
 
 interface EditPlantDialogProps {
@@ -78,8 +79,8 @@ export function EditPlantDialog({
       await updatePlant(plant.id, updateData);
       onOpenChange(false);
       onSuccess?.();
-    } catch (err: any) {
-      setError(err.response?.data?.error || "Failed to update plant");
+    } catch (err) {
+      setError(getErrorMessage(err, "Failed to update plant"));
     } finally {
       setLoading(false);
     }

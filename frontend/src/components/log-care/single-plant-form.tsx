@@ -16,7 +16,7 @@ import { CareTypeSelect } from "@/components/forms/care-type-select";
 import { createCareLog } from "@/api/careLogs";
 import { uploadCareLogPhotos } from "@/api/photos";
 import type { Plant, CareType } from "@/types";
-import { getTodayLocal } from "@/lib/utils";
+import { getTodayLocal, getErrorMessage } from "@/lib/utils";
 
 interface SinglePlantFormProps {
   plants: Plant[];
@@ -138,12 +138,8 @@ export function SinglePlantForm({
       });
 
       onSuccess("Care logged successfully!");
-    } catch (err: any) {
-      onError(
-        err.response?.data?.error ||
-          err.response?.data?.message ||
-          "Failed to log care. Please try again.",
-      );
+    } catch (err) {
+      onError(getErrorMessage(err, "Failed to log care. Please try again."));
     } finally {
       setSubmitting(false);
     }
