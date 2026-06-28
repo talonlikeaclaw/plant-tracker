@@ -1,7 +1,9 @@
 import api from "./axios";
 import type { CareType } from "@/types";
 
-export async function getDefaultCareTypes(): Promise<{ care_types: CareType[] }> {
+export async function getDefaultCareTypes(): Promise<{
+  care_types: CareType[];
+}> {
   const res = await api.get("/care-types/default");
   return res.data;
 }
@@ -14,7 +16,7 @@ export async function getUserCareTypes(): Promise<{ care_types: CareType[] }> {
 export async function createCareType(data: {
   name: string;
   description?: string;
-}) {
+}): Promise<{ care_type: CareType }> {
   const res = await api.post("/care-types", data);
   return res.data;
 }
@@ -24,8 +26,8 @@ export async function updateCareType(
   data: {
     name?: string;
     description?: string;
-  }
-) {
+  },
+): Promise<{ care_type: CareType }> {
   const res = await api.patch(`/care-types/${id}`, data);
   return res.data;
 }

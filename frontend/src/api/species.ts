@@ -11,7 +11,7 @@ export async function createSpecies(data: {
   scientific_name?: string;
   sunlight?: string;
   water_requirements?: string;
-}) {
+}): Promise<{ species: Species }> {
   const res = await api.post("/species", data);
   return res.data;
 }
