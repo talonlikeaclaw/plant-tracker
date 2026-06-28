@@ -4,7 +4,7 @@ import {
   Route,
   Navigate,
 } from "react-router-dom";
-import { ThemeProvider } from "@/components/theme-provider";
+import { ThemeProvider } from "@/components/theme/theme-provider";
 import Dashboard from "@/pages/Dashboard";
 import Login from "@/pages/Login";
 import Register from "@/pages/Register";
@@ -28,7 +28,11 @@ function App() {
           <Route
             path="/"
             element={
-              isLoggedIn ? <Navigate to="/dashboard" /> : <Navigate to="/login" />
+              isLoggedIn ? (
+                <Navigate to="/dashboard" />
+              ) : (
+                <Navigate to="/login" />
+              )
             }
           />
           <Route path="/register" element={<Register />} />
