@@ -264,3 +264,60 @@ The frontend is a React SPA built with Vite and TypeScript. Routes are defined i
 - **UI:** shadcn/ui components in `src/components/ui/`, styled with Tailwind CSS and CSS variables. Dark mode is the default, with the theme stored under the `vite-ui-theme` key.
 - **Auth images:** photos are JWT protected, so `AuthImage` fetches the file via axios and renders it from a blob URL, revoking the URL on unmount.
 - **Path alias:** `@/` maps to `src/`.
+
+## Database Migrations and Seeding
+
+Migrations are managed with Alembic and live in `backend/alembic/versions/`. Run these from the `backend/` directory.
+
+```bash
+alembic upgrade head                       # apply all migrations
+alembic revision --autogenerate -m "msg"   # create a migration from model changes
+alembic downgrade -1                       # roll back the latest migration
+```
+
+Seed the system default care types once after setting up the database. The script is idempotent and skips itself if defaults already exist.
+
+```bash
+python seed_defaults.py   # Watering, Fertilizing, Repotting, Pruning, Pest Control, Misting
+```
+
+## Photo Storage
+
+Photos are stored on disk under the `UPLOAD_FOLDER` path, not in the database. The database holds only metadata.
+
+```
+uploads/
+  plants/<plant_id>/<uuid>.jpg          # original (all formats converted to JPEG)
+  plants/<plant_id>/<uuid>_thumb.jpg    # 400px-wide thumbnail
+  care-logs/<care_log_id>/<uuid>.jpg
+  care-logs/<care_log_id>/<uuid>_thumb.jpg
+```
+
+Processing, handled by `PhotoService`:
+
+- MIME type is sniffed from the file contents with `python-magic`, so a spoofed upload header cannot bypass validation.
+- HEIC and HEIF images are converted to JPEG for browser compatibility.
+- A 400px-wide thumbnail is generated with Lanczos resampling.
+- Filenames are random UUIDs and are never reused.
+
+Serving:
+
+- Files are served through `GET /api/photos/<id>/file`, which is JWT protected and ownership checked. Pass `?thumb=1` for the thumbnail.
+- The frontend renders them with `AuthImage`, which fetches via axios and renders from a blob URL.
+
+Cleanup:
+
+- Database cascades remove the `Photo` rows automatically when a plant or care log is deleted.
+- The on-disk files are removed by `cleanup_plant_files` or `cleanup_care_log_files`.
+
+## Contributing
+
+Pull requests are welcome. To keep things consistent:
+
+1. Run `npm run lint` in `frontend/` before submitting.
+2. For database changes, generate an Alembic migration with `alembic revision --autogenerate -m "..."` and apply it locally with `alembic upgrade head`.
+3. Keep any new API endpoints behind JWT and scoped to the current user.
+
+## License
+
+Released under the MIT License.
