@@ -233,3 +233,34 @@ Then use the access token for any protected request:
 curl http://localhost:5000/api/plants \
   -H "Authorization: Bearer <access_token>"
 ```
+
+## Frontend
+
+The frontend is a React SPA built with Vite and TypeScript. Routes are defined in `src/App.tsx`, and protected routes redirect to `/login` when there is no `token` in `localStorage`.
+
+### Routes
+
+| Path              | Page        | Access                                      |
+| ----------------- | ----------- | ------------------------------------------- |
+| `/`               | redirect    | to `/dashboard` if logged in, else `/login` |
+| `/login`          | Login       | public                                      |
+| `/register`       | Register    | public                                      |
+| `/dashboard`      | Dashboard   | protected                                   |
+| `/plants`         | ViewPlants  | protected                                   |
+| `/plants/add`     | AddPlant    | protected                                   |
+| `/plants/:id`     | PlantDetail | protected                                   |
+| `/species`        | Species     | protected                                   |
+| `/care-plans`     | CarePlans   | protected                                   |
+| `/care-plans/add` | AddCarePlan | protected                                   |
+| `/care-types`     | CareTypes   | protected                                   |
+| `/log-care`       | LogCare     | protected                                   |
+| `/settings`       | Settings    | protected                                   |
+
+### Conventions
+
+- **HTTP client:** `src/api/axios.ts` sets `baseURL` to `${VITE_API_URL}/api`, attaches the JWT from `localStorage` on every request, and silently refreshes on a 401 using the stored refresh token. If the refresh fails it clears the tokens and redirects to `/login`.
+- **API modules:** one file per domain in `src/api/` (`plants`, `species`, `careLogs`, `carePlans`, `careTypes`, `photos`, `users`, `auth`, `dashboard`), each exporting typed functions.
+- **Types:** shared TypeScript interfaces live in `src/types/`.
+- **UI:** shadcn/ui components in `src/components/ui/`, styled with Tailwind CSS and CSS variables. Dark mode is the default, with the theme stored under the `vite-ui-theme` key.
+- **Auth images:** photos are JWT protected, so `AuthImage` fetches the file via axios and renders it from a blob URL, revoking the URL on unmount.
+- **Path alias:** `@/` maps to `src/`.
