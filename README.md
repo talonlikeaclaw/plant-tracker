@@ -53,3 +53,67 @@ plant-tracker/
 ├── docker-compose.yml
 └── .env                # Environment variables (gitignored)
 ```
+
+## Getting Started
+
+### Prerequisites
+
+- Python 3.11+
+- Node.js 18+ and npm
+- PostgreSQL 15
+- libmagic (system library required by `python-magic` for photo validation)
+
+### Environment variables
+
+Create a `.env` file at the project root. The backend loads it automatically via `python-dotenv`.
+
+| Variable         | Required | Description                                                                             |
+| ---------------- | -------- | --------------------------------------------------------------------------------------- |
+| `SECRET_KEY`     | yes      | Flask session signing key                                                               |
+| `JWT_SECRET_KEY` | yes      | JWT signing key. The app refuses to start without it                                    |
+| `DB_NAME`        | yes      | PostgreSQL database name                                                                |
+| `DB_USER`        | yes      | PostgreSQL username                                                                     |
+| `DB_PASSWORD`    | yes      | PostgreSQL password                                                                     |
+| `DB_HOST`        | yes      | PostgreSQL host, for example `localhost`                                                |
+| `DB_PORT`        | yes      | PostgreSQL port, typically `5432`                                                       |
+| `UPLOAD_FOLDER`  | no       | Path for photo storage. Defaults to `/app/uploads`                                      |
+| `VITE_API_URL`   | frontend | Backend base URL, for example `http://localhost:5000`. The client appends `/api` itself |
+
+### Backend (run from `backend/`)
+
+```bash
+python -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+
+# Apply database migrations
+alembic upgrade head
+
+# Optional: seed default care types (Watering, Fertilizing, etc.)
+python seed_defaults.py
+
+# Start the dev server at http://localhost:5000
+python run.py
+```
+
+Tables are also auto-created on startup via `Base.metadata.create_all`, but prefer Alembic for any schema changes.
+
+### Frontend (run from `frontend/`)
+
+```bash
+npm install
+npm run dev      # dev server with hot reload
+npm run build    # production build
+npm run lint     # eslint
+```
+
+Set `VITE_API_URL` for the frontend, either in `frontend/.env` or your shell, pointing at the backend (for example `http://localhost:5000`).
+
+### Docker
+
+```bash
+docker-compose up --build    # backend on :5000, frontend on :3001
+docker-compose down
+```
+
+The PostgreSQL service is commented out in `docker-compose.yml`, so by default the app expects an external PostgreSQL instance. Uncomment the `db` service to run Postgres in Docker as well.
