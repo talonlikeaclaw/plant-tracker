@@ -4,7 +4,7 @@ from typing import List, Optional
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.models import CarePlan, Photo, PlantCare
+from app.models import CarePlan, PlantCare
 from app.services.photo_service import PhotoService
 
 
@@ -224,12 +224,7 @@ class PlantCareService:
             # Include care that is overdue, due soon, or upcoming within 30 days
             days_until_due = (next_due - today).days
             if days_until_due <= 30:
-                cover_photo = (
-                    self.db.query(Photo)
-                    .filter_by(plant_id=plan.plant_id)
-                    .order_by(Photo.position.asc(), Photo.created_at.asc())
-                    .first()
-                )
+                cover_photo = PhotoService(self.db).get_cover_photo(plan.plant_id)
 
                 upcoming_logs.append(
                     {

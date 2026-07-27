@@ -49,14 +49,15 @@ export function PlantCard({
       <button
         type="button"
         onClick={() => onNavigatePlant(plant.id)}
-        className="group block w-full"
+        className="group relative block w-full overflow-hidden"
       >
         <PlantThumbnail
           photoId={plant.cover_photo_id}
           thumb
-          className="h-64 w-full object-cover transition-transform group-hover:scale-105"
+          className="h-64 w-full object-cover"
           iconClassName="h-16 w-16 text-muted-foreground/50"
         />
+        <span className="pointer-events-none absolute inset-0 bg-black/0 transition-colors group-hover:bg-black/20" />
       </button>
       <CardHeader>
         <div className="flex items-start justify-between gap-2">

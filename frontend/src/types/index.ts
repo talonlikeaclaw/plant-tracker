@@ -108,5 +108,6 @@ export interface PhotoSource {
 
 // Photo with source info, returned by the aggregated gallery endpoints
 export interface PhotoWithSource extends Photo {
+  is_cover: boolean;
   source: PhotoSource;
 }

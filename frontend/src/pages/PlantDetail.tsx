@@ -32,7 +32,8 @@ import {
   getPlantPhotos,
   uploadPlantPhotos,
   deletePhoto,
-  updatePhotoPosition,
+  makePhotoFeatured,
+  updatePhotoTakenAt,
 } from "@/api/photos";
 import { getCareLogsByPlant } from "@/api/careLogs";
 import { useCareTypes } from "@/hooks/use-care-types";
@@ -89,12 +90,19 @@ export default function PlantDetail() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [plantId]);
 
-  const handleUpload = async (files: File[]) => {
-    await uploadPlantPhotos(plantId, files);
+  const handleUpload = async (
+    files: File[],
+    featuredIndex: number | undefined,
+    takenAts: (string | undefined)[],
+  ) => {
+    const result = await uploadPlantPhotos(plantId, files, featuredIndex, takenAts);
     await refreshPhotos();
-    setShowUploader(false);
-    setSuccess("Photos uploaded successfully!");
-    setTimeout(() => setSuccess(""), 5000);
+    if (result.errors.length === 0) {
+      setShowUploader(false);
+      setSuccess("Photos uploaded successfully!");
+      setTimeout(() => setSuccess(""), 5000);
+    }
+    return result;
   };
 
   const handleDeletePhoto = async (photoId: number) => {
@@ -113,28 +121,29 @@ export default function PlantDetail() {
     }
   };
 
-  const handleReorder = async (photoId: number, direction: "up" | "down") => {
-    // Get plant photos sorted by position
-    const plantPhotos = photos
-      .filter((p) => p.source.type === "plant")
-      .sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
-
-    const idx = plantPhotos.findIndex((p) => p.id === photoId);
-    if (idx === -1) return;
-
-    const swapIdx = direction === "up" ? idx - 1 : idx + 1;
-    if (swapIdx < 0 || swapIdx >= plantPhotos.length) return;
-
-    const current = plantPhotos[idx];
-    const swapWith = plantPhotos[swapIdx];
-
+  const handleSetCover = async (photoId: number) => {
     setActionLoading(true);
     try {
-      await updatePhotoPosition(current.id, swapWith.position ?? 0);
-      await updatePhotoPosition(swapWith.id, current.position ?? 0);
+      await makePhotoFeatured(photoId);
       await refreshPhotos();
+      setSuccess("Cover photo updated!");
+      setTimeout(() => setSuccess(""), 5000);
     } catch {
-      setError("Failed to reorder photos");
+      setError("Failed to update cover photo");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleUpdateTakenAt = async (photoId: number, takenAt: string) => {
+    setActionLoading(true);
+    try {
+      await updatePhotoTakenAt(photoId, takenAt);
+      await refreshPhotos();
+      setSuccess("Photo date updated!");
+      setTimeout(() => setSuccess(""), 5000);
+    } catch {
+      setError("Failed to update photo date");
     } finally {
       setActionLoading(false);
     }
@@ -281,7 +290,8 @@ export default function PlantDetail() {
           <PhotoGallery
             photos={photos}
             onDelete={(photoId) => setPhotoToDelete(photoId)}
-            onReorder={handleReorder}
+            onSetCover={handleSetCover}
+            onUpdateTakenAt={handleUpdateTakenAt}
           />
         </CardContent>
       </Card>

@@ -15,6 +15,11 @@ class Plant(Base):
     date_added = Column(Date)
     last_watered = Column(Date)
     location = Column(String)
+    cover_photo_id = Column(
+        Integer,
+        ForeignKey("photos.id", ondelete="SET NULL"),
+        nullable=True,
+    )
 
     user = relationship("User", back_populates="plants")
     species = relationship("Species", back_populates="plants")
@@ -25,4 +30,5 @@ class Plant(Base):
         back_populates="plant",
         cascade="all, delete",
         passive_deletes=True,
+        foreign_keys="Photo.plant_id",
     )

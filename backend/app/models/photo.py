@@ -34,5 +34,5 @@ class Photo(Base):
     taken_at = Column(DateTime, nullable=False, default=datetime.utcnow)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
-    plant = relationship("Plant", back_populates="photos")
+    plant = relationship("Plant", back_populates="photos", foreign_keys=[plant_id])
     care_log = relationship("PlantCare", back_populates="photos")

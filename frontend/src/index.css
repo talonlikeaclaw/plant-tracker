@@ -134,6 +134,14 @@ body {
   --sidebar-ring: oklch(0.60 0.15 150);
 }
 
+input[type="date"] {
+  color-scheme: light;
+}
+
+.dark input[type="date"] {
+  color-scheme: dark;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

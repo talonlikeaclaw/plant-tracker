@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Trash2Icon, ImageIcon, StarIcon } from "lucide-react";
+import { Trash2Icon, ImageIcon, StarIcon, XIcon } from "lucide-react";
 import { format } from "date-fns";
 import { AuthImage } from "@/components/photos/auth-image";
 import { Badge } from "@/components/ui/badge";
@@ -8,7 +8,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Dialog,
+  DialogClose,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -19,7 +21,7 @@ interface PhotoGalleryProps {
   photos: PhotoWithSource[];
   /** If provided, a delete button appears in the photo viewer */
   onDelete?: (photoId: number) => void;
-  /** If provided, plant photos can be selected as the cover photo */
+  /** If provided, any photo can be selected as the plant cover photo */
   onSetCover?: (photoId: number) => void;
   /** If provided, photo dates can be corrected in the photo viewer */
   onUpdateTakenAt?: (photoId: number, takenAt: string) => void;
@@ -97,7 +99,7 @@ export function PhotoGallery({
             >
               {getSourceLabel(photo.source)}
             </Badge>
-            {photo.source.type === "plant" && photo.position === 0 && (
+            {photo.is_cover && (
               <Badge variant="success" className="pointer-events-none absolute bottom-1 left-1 text-xs">
                 <StarIcon className="mr-1 h-3 w-3 fill-current" />
                 Cover
@@ -114,86 +116,106 @@ export function PhotoGallery({
           if (!open) setSelected(null);
         }}
       >
-        <DialogContent className="max-h-[calc(100dvh-2rem)] max-w-3xl overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="sr-only">Photo viewer</DialogTitle>
+        <DialogContent
+          className="w-[92vw] min-w-0 max-w-[calc(100vw-2rem)] max-h-[calc(100dvh-2rem)] overflow-x-hidden overflow-y-auto rounded-lg p-4 sm:w-fit sm:max-w-3xl sm:p-6"
+          onOpenAutoFocus={(event) => event.preventDefault()}
+        >
+          <DialogClose asChild>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="absolute right-3 top-3 z-10 h-8 w-8"
+              aria-label="Close photo viewer"
+            >
+              <XIcon className="h-4 w-4" />
+            </Button>
+          </DialogClose>
+          <DialogHeader className="pr-10 text-left">
+            <DialogTitle>Photo Details</DialogTitle>
+            <DialogDescription>
+              Manage this photo's details and settings.
+            </DialogDescription>
           </DialogHeader>
           {selected && (
-            <div className="space-y-3">
+            <div className="min-w-0 space-y-3">
               <AuthImage
                 photoId={selected.id}
-                className="max-h-[60dvh] w-full rounded-lg object-contain"
+                className="max-h-[60dvh] max-w-full rounded-lg object-contain"
                 alt={selected.original_filename || "Plant photo"}
               />
               <div className="space-y-3">
-                <div className="min-w-0 space-y-1">
+                <div className="flex min-w-0 flex-wrap items-center gap-2">
                   <Badge variant="secondary" className="text-xs">
                     {getSourceLabel(selected.source)}
                   </Badge>
                   {selected.taken_at && (
-                    <p className="text-xs text-muted-foreground">
+                    <span className="text-xs text-muted-foreground">
                       Taken {format(new Date(selected.taken_at), "PPP")}
-                    </p>
-                  )}
-                  {selected.original_filename && (
-                    <p className="truncate text-sm text-muted-foreground">
-                      {selected.original_filename}
-                    </p>
+                    </span>
                   )}
                 </div>
-                {onUpdateTakenAt && (
-                  <div className="flex flex-wrap items-end gap-2">
-                    <div className="grid gap-1.5">
-                      <Label htmlFor="selected-photo-date">Photo date</Label>
-                      <Input
-                        id="selected-photo-date"
-                        type="date"
-                        value={takenAt}
-                        onChange={(event) => setTakenAt(event.target.value)}
-                      />
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      disabled={!takenAt || takenAt === selected.taken_at?.slice(0, 10)}
-                      onClick={() => {
-                        onUpdateTakenAt(selected.id, takenAt);
-                        setSelected(null);
-                      }}
-                    >
-                      Save date
-                    </Button>
-                  </div>
-                )}
-                <div className="flex flex-wrap gap-2">
-                  {onSetCover &&
-                    selected.source.type === "plant" && (
+                <div className="grid grid-cols-2 gap-2">
+                  {onUpdateTakenAt && (
+                    <>
+                      <div className="grid gap-1.5">
+                        <Label
+                          htmlFor="selected-photo-date"
+                          className="sr-only"
+                        >
+                          Photo date
+                        </Label>
+                        <Input
+                          id="selected-photo-date"
+                          type="date"
+                          value={takenAt}
+                          onChange={(event) => setTakenAt(event.target.value)}
+                          className="h-11 w-full"
+                        />
+                      </div>
                       <Button
-                        variant="secondary"
+                        variant="default"
                         size="sm"
-                        disabled={selected.position === 0}
+                        className="h-11 w-full"
+                        disabled={!takenAt || takenAt === selected.taken_at?.slice(0, 10)}
                         onClick={() => {
-                          onSetCover(selected.id);
+                          onUpdateTakenAt(selected.id, takenAt);
                           setSelected(null);
                         }}
                       >
-                        <StarIcon className="mr-1.5 h-3.5 w-3.5" />
-                        {selected.position === 0 ? "Cover photo" : "Set as cover"}
+                        Save date
                       </Button>
-                    )}
-                  {onDelete && (
+                    </>
+                  )}
+                  {onSetCover && (
                     <Button
-                      variant="destructive"
+                      variant="secondary"
                       size="sm"
+                      className="h-11 w-full"
+                      disabled={selected.is_cover}
                       onClick={() => {
-                        onDelete(selected.id);
+                        onSetCover(selected.id);
                         setSelected(null);
+                      }}
+                    >
+                      <StarIcon className="mr-1.5 h-3.5 w-3.5" />
+                      {selected.is_cover ? "Cover photo" : "Set as cover"}
+                    </Button>
+                  )}
+                  {onDelete && (
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        className="h-11 w-full"
+                        onClick={() => {
+                          onDelete(selected.id);
+                          setSelected(null);
                       }}
                     >
                       <Trash2Icon className="mr-1.5 h-3.5 w-3.5" />
                       Delete
-                    </Button>
-                  )}
+                      </Button>
+                    )}
                 </div>
               </div>
             </div>

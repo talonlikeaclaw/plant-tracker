@@ -1,10 +1,8 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import {
   PlusCircleIcon,
   CameraIcon,
-  UploadCloudIcon,
-  XIcon,
 } from "lucide-react";
 import {
   Card,
@@ -31,8 +29,9 @@ import { createPlant } from "@/api/plants";
 import { getAllSpecies } from "@/api/species";
 import { uploadPlantPhotos } from "@/api/photos";
 import SpeciesForm from "@/components/species/species-form";
+import { PhotoPicker, type SelectedPhoto } from "@/components/photos/photo-picker";
 import type { Species } from "@/types";
-import { cn, getErrorMessage } from "@/lib/utils";
+import { getErrorMessage } from "@/lib/utils";
 
 export default function AddPlant() {
   const navigate = useNavigate();
@@ -51,11 +50,8 @@ export default function AddPlant() {
   const [dialogOpen, setDialogOpen] = useState(false);
 
   // Photo upload state
-  const [selectedFiles, setSelectedFiles] = useState<
-    { file: File; preview: string }[]
-  >([]);
-  const filesRef = useRef(selectedFiles);
-  filesRef.current = selectedFiles;
+  const [selectedFiles, setSelectedFiles] = useState<SelectedPhoto[]>([]);
+  const [createdPlantId, setCreatedPlantId] = useState<number | null>(null);
 
   const loadSpecies = async () => {
     try {
@@ -71,12 +67,6 @@ export default function AddPlant() {
     loadSpecies();
   }, []);
 
-  // Cleanup object URLs on unmount
-  useEffect(() => {
-    return () =>
-      filesRef.current.forEach((f) => URL.revokeObjectURL(f.preview));
-  }, []);
-
   const handleSpeciesAdded = (newSpecies: Species) => {
     setDialogOpen(false);
     loadSpecies();
@@ -90,58 +80,6 @@ export default function AddPlant() {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  // Photo upload handlers
-  const addFiles = (fileList: FileList | null) => {
-    if (!fileList) return;
-
-    const ALLOWED_TYPES = [
-      "image/jpeg",
-      "image/png",
-      "image/webp",
-      "image/heic",
-      "image/heif",
-    ];
-    const MAX_SIZE = 10 * 1024 * 1024; // 10MB
-
-    const newItems: { file: File; preview: string }[] = [];
-    const errors: string[] = [];
-
-    Array.from(fileList).forEach((file) => {
-      if (!ALLOWED_TYPES.includes(file.type)) {
-        errors.push(`${file.name}: unsupported format`);
-        return;
-      }
-      if (file.size > MAX_SIZE) {
-        errors.push(`${file.name}: exceeds 10MB limit`);
-        return;
-      }
-      newItems.push({
-        file,
-        preview: URL.createObjectURL(file),
-      });
-    });
-
-    if (errors.length > 0) {
-      setError(errors.join("; "));
-    }
-
-    if (newItems.length > 0) {
-      setSelectedFiles((prev) => [...prev, ...newItems]);
-    }
-  };
-
-  const removeFile = (idx: number) => {
-    setSelectedFiles((prev) => {
-      URL.revokeObjectURL(prev[idx].preview);
-      return prev.filter((_, i) => i !== idx);
-    });
-  };
-
-  const clearFiles = () => {
-    selectedFiles.forEach((f) => URL.revokeObjectURL(f.preview));
-    setSelectedFiles([]);
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
@@ -153,56 +91,52 @@ export default function AddPlant() {
     }
 
     setLoading(true);
-    let createdPlantId: number | null = null;
-
     try {
-      // Phase 1: Create plant
-      const plantData: {
-        nickname: string;
-        species_id?: number;
-        location?: string;
-        date_added?: string;
-        last_watered?: string;
-      } = {
-        nickname: form.nickname,
-      };
-
-      // Only include optional fields if they have values
-      if (form.species_id) plantData.species_id = parseInt(form.species_id);
-      if (form.location) plantData.location = form.location;
-      if (form.date_added) plantData.date_added = form.date_added;
-      if (form.last_watered) plantData.last_watered = form.last_watered;
-
-      const plantRes = await createPlant(plantData);
-      createdPlantId = plantRes.plant.id;
+      let plantId = createdPlantId;
+      if (plantId === null) {
+        const plantData: {
+          nickname: string;
+          species_id?: number;
+          location?: string;
+          date_added?: string;
+          last_watered?: string;
+        } = { nickname: form.nickname };
+        if (form.species_id) plantData.species_id = parseInt(form.species_id);
+        if (form.location) plantData.location = form.location;
+        if (form.date_added) plantData.date_added = form.date_added;
+        if (form.last_watered) plantData.last_watered = form.last_watered;
+        const plantRes = await createPlant(plantData);
+        plantId = plantRes.plant.id;
+        setCreatedPlantId(plantId);
+      }
+      const resolvedPlantId = plantId;
+      if (resolvedPlantId === null) throw new Error("Plant was not created");
 
       // Phase 2: Upload photos if any selected
       if (selectedFiles.length > 0) {
         try {
-          await uploadPlantPhotos(
-            createdPlantId!,
+          const uploadResult = await uploadPlantPhotos(
+            resolvedPlantId,
             selectedFiles.map((f) => f.file),
+            selectedFiles.findIndex((file) => file.isFeatured),
+            selectedFiles.map((f) => f.takenAt || undefined),
           );
+          if (uploadResult.errors.length > 0) {
+            const failed = new Map(uploadResult.errors.map((item) => [item.index, item.error]));
+            setSelectedFiles(selectedFiles.flatMap((item, index) => failed.has(index) ? [{ ...item, uploadError: failed.get(index) }] : []));
+            setError(`Plant added. ${uploadResult.photos.length} photo${uploadResult.photos.length === 1 ? "" : "s"} uploaded; correct the remaining photo dates and submit again.`);
+            return;
+          }
           const photoMsg =
             selectedFiles.length === 1
               ? "1 photo"
               : `${selectedFiles.length} photos`;
           setSuccess(`Plant added successfully with ${photoMsg}!`);
 
-          // Cleanup previews
-          selectedFiles.forEach((f) => URL.revokeObjectURL(f.preview));
           setSelectedFiles([]);
         } catch (photoErr) {
-          // Plant created but photos failed - redirect to detail page
           console.error("Photo upload failed:", photoErr);
-          setError(
-            `Plant added but photo upload failed. You can add photos on the plant detail page.`,
-          );
-
-          // Redirect after delay
-          setTimeout(() => {
-            navigate(`/plants/${createdPlantId!}`);
-          }, 3000);
+          setError("Plant added, but the photo upload did not complete. Your selected photos are still ready to retry.");
           return;
         }
       } else {
@@ -217,6 +151,7 @@ export default function AddPlant() {
         date_added: "",
         last_watered: "",
       });
+      setCreatedPlantId(null);
 
       // Redirect to dashboard after 1.5 seconds
       setTimeout(() => {
@@ -370,73 +305,7 @@ export default function AddPlant() {
                 <Label>Plant Photos (Optional)</Label>
               </div>
 
-              {/* Dropzone */}
-              <div
-                onClick={() =>
-                  !loading && document.getElementById("photo-input")?.click()
-                }
-                className={cn(
-                  "flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed p-6 text-center transition-colors",
-                  loading
-                    ? "pointer-events-none opacity-50"
-                    : "border-muted-foreground/20 hover:border-muted-foreground/40",
-                )}
-              >
-                <UploadCloudIcon className="mb-2 h-8 w-8 text-muted-foreground/50" />
-                <p className="text-sm font-medium">
-                  Drag photos here or click to browse
-                </p>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  JPG, PNG, WebP, HEIC · max 10MB each
-                </p>
-                <input
-                  id="photo-input"
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
-                  multiple
-                  className="hidden"
-                  disabled={loading}
-                  onChange={(e) => addFiles(e.target.files)}
-                />
-              </div>
-
-              {/* Preview Grid */}
-              {selectedFiles.length > 0 && (
-                <>
-                  <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-5">
-                    {selectedFiles.map((item, idx) => (
-                      <div
-                        key={item.preview}
-                        className="group relative aspect-square overflow-hidden rounded-lg bg-muted"
-                      >
-                        <img
-                          src={item.preview}
-                          alt={item.file.name}
-                          className="h-full w-full object-cover"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => removeFile(idx)}
-                          disabled={loading}
-                          className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-destructive text-destructive-foreground opacity-0 transition-opacity hover:bg-destructive/90 group-hover:opacity-100 focus:opacity-100 focus:outline-none disabled:opacity-50"
-                        >
-                          <XIcon className="h-3 w-3" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={clearFiles}
-                    disabled={loading}
-                  >
-                    Clear all photos
-                  </Button>
-                </>
-              )}
+              <PhotoPicker items={selectedFiles} onChange={setSelectedFiles} allowDates allowFeatured defaultFirstFeatured disabled={loading} />
             </div>
 
             {/* Success / Error Messages */}

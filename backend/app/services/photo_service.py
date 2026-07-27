@@ -146,30 +146,31 @@ class PhotoService:
         )
 
     def get_cover_photo(self, plant_id: int) -> Optional[Photo]:
-        """Returns the cover photo for a Plant (lowest position value).
-        Used to show a thumbnail on the plants grid. Returns None if the
-        plant has no direct photos.
-        """
-        return (
-            self.db.query(Photo)
-            .filter_by(plant_id=plant_id)
-            .order_by(Photo.position.asc(), Photo.created_at.asc())
-            .first()
-        )
+        """Returns the explicitly selected cover photo for a Plant."""
+        plant = self.db.query(Plant).filter_by(id=plant_id).first()
+        if not plant or plant.cover_photo_id is None:
+            return None
+        return self.get_photo(plant.cover_photo_id)
 
     def get_aggregated_plant_photos(self, plant_id: int) -> List[dict]:
         """Returns a unified gallery for a Plant: the Plant's own photos plus
         every photo attached to any of its care logs.
 
-        The featured plant photo is pinned first. All remaining direct and care
+        The selected cover photo is pinned first. All remaining direct and care
         log photos form one chronological timeline.
         """
         featured: Optional[dict] = None
         timeline: List[tuple[datetime, dict]] = []
+        cover = self.get_cover_photo(plant_id)
+        cover_photo_id = cover.id if cover else None
 
         for photo in self.get_plant_photos(plant_id):
-            serialized = self._serialize_photo(photo, source_type="plant")
-            if photo.position == 0 and featured is None:
+            serialized = self._serialize_photo(
+                photo,
+                source_type="plant",
+                is_cover=photo.id == cover_photo_id,
+            )
+            if photo.id == cover_photo_id:
                 featured = serialized
             else:
                 timeline.append((photo.taken_at, serialized))
@@ -178,19 +179,19 @@ class PhotoService:
         care_logs = self.db.query(PlantCare).filter_by(plant_id=plant_id).all()
         for log in care_logs:
             for photo in self.get_care_log_photos(log.id):  # type: ignore[arg-type]
-                timeline.append(
-                    (
-                        photo.taken_at,
-                        self._serialize_photo(
-                            photo,
-                            source_type="care_log",
-                            care_log_id=log.id,  # type: ignore[arg-type]
-                            care_type=log.care_type.name if log.care_type else None,
-                            care_date=log.care_date.isoformat() if log.care_date else None,  # type: ignore
-                            note=log.note,  # type: ignore[arg-type]
-                        ),
-                    )
+                serialized = self._serialize_photo(
+                    photo,
+                    source_type="care_log",
+                    care_log_id=log.id,  # type: ignore[arg-type]
+                    care_type=log.care_type.name if log.care_type else None,
+                    care_date=log.care_date.isoformat() if log.care_date else None,  # type: ignore
+                    note=log.note,  # type: ignore[arg-type]
+                    is_cover=photo.id == cover_photo_id,
                 )
+                if photo.id == cover_photo_id:
+                    featured = serialized
+                else:
+                    timeline.append((photo.taken_at, serialized))
 
         timeline.sort(key=lambda item: item[0])
         results = [photo for _, photo in timeline]
@@ -199,7 +200,7 @@ class PhotoService:
     # --- REORDER / DELETE ---
 
     def update_position(self, photo_id: int, new_position: int) -> Optional[Photo]:
-        """Updates a photo's position (used for plant cover/reorder).
+        """Updates a photo's local owner position.
 
         Args:
             photo_id (int): ID of the photo to update.
@@ -235,13 +236,28 @@ class PhotoService:
         return photo
 
     def make_featured(self, photo_id: int) -> Optional[Photo]:
-        """Moves one plant photo to the cover position."""
+        """Sets a direct plant or care-log photo as its plant's cover photo."""
         photo = self.get_photo(photo_id)
-        if not photo or photo.plant_id is None:
+        if not photo:
             return None
 
-        self.move_to_front([photo_id])
-        self.db.refresh(photo)
+        plant_id = photo.plant_id
+        if plant_id is None and photo.care_log is not None:
+            plant_id = photo.care_log.plant_id
+        if plant_id is None:
+            return None
+
+        plant = self.db.query(Plant).filter_by(id=plant_id).first()
+        if not plant:
+            return None
+
+        plant.cover_photo_id = photo.id
+        try:
+            self.db.commit()
+            self.db.refresh(photo)
+        except IntegrityError:
+            self.db.rollback()
+            raise
         return photo
 
     def move_to_front(self, photo_ids: List[int]) -> None:
@@ -480,7 +496,7 @@ class PhotoService:
         self, plant_id: Optional[int] = None, care_log_id: Optional[int] = None
     ) -> int:
         """Returns the next position value for a new photo under the given owner.
-        Position 0 is the cover photo for plants.
+        Positions are scoped to the photo owner; the plant cover is stored separately.
         """
         q = self.db.query(func.max(Photo.position))
         if plant_id is not None:
@@ -532,6 +548,7 @@ class PhotoService:
         care_type: Optional[str] = None,
         care_date: Optional[str] = None,
         note: Optional[str] = None,
+        is_cover: bool = False,
     ) -> dict:
         """Serializes a Photo row into a JSON-friendly dict with source metadata."""
         data = {
@@ -547,6 +564,7 @@ class PhotoService:
             "position": photo.position,
             "taken_at": photo.taken_at.isoformat() if photo.taken_at else None,
             "created_at": photo.created_at.isoformat() if photo.created_at else None,  # type: ignore
+            "is_cover": is_cover,
             "source": {"type": source_type},
         }
         if source_type == "care_log":
