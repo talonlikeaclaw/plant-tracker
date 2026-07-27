@@ -31,6 +31,7 @@ class Photo(Base):
     width = Column(Integer)
     height = Column(Integer)
     position = Column(Integer, default=0)
+    taken_at = Column(DateTime, nullable=False, default=datetime.utcnow)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     plant = relationship("Plant", back_populates="photos")

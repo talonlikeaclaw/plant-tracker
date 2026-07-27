@@ -24,6 +24,7 @@ class PhotoService:
     """Service class that handles business logic for Photo operations"""
 
     THUMBNAIL_WIDTH = 400
+    PREVIEW_MAX_DIMENSION = 1200
     JPEG_QUALITY_ORIGINAL = 85
     JPEG_QUALITY_THUMBNAIL = 80
     OUTPUT_MIME = "image/jpeg"
@@ -40,7 +41,12 @@ class PhotoService:
 
     # --- UPLOAD ---
 
-    def upload_plant_photo(self, plant_id: int, file_storage: FileStorage) -> Photo:
+    def upload_plant_photo(
+        self,
+        plant_id: int,
+        file_storage: FileStorage,
+        taken_at: Optional[datetime] = None,
+    ) -> Photo:
         """Validates, processes, saves, and records a photo for a Plant.
 
         Args:
@@ -55,7 +61,7 @@ class PhotoService:
             IntegrityError: If DB commit fails.
         """
         target_dir = os.path.join(self.upload_folder, "plants", str(plant_id))
-        meta = self._process_and_save(file_storage, target_dir)
+        meta = self._process_and_save(file_storage, target_dir, taken_at)
         meta["plant_id"] = plant_id
         meta["position"] = self._next_position(plant_id=plant_id)
         return self._create_photo_row(meta)
@@ -77,12 +83,43 @@ class PhotoService:
             IntegrityError: If DB commit fails.
         """
         target_dir = os.path.join(self.upload_folder, "care-logs", str(care_log_id))
-        meta = self._process_and_save(file_storage, target_dir)
+        care_log = self.db.query(PlantCare).filter_by(id=care_log_id).first()
+        taken_at = (
+            datetime.combine(care_log.care_date, datetime.min.time())
+            if care_log and care_log.care_date
+            else None
+        )
+        meta = self._process_and_save(file_storage, target_dir, taken_at)
         meta["care_log_id"] = care_log_id
         meta["position"] = self._next_position(care_log_id=care_log_id)
         return self._create_photo_row(meta)
 
     # --- READ ---
+
+    def create_preview(self, file_storage: FileStorage) -> io.BytesIO:
+        """Converts an upload to a JPEG preview without writing it to disk.
+
+        This lets browsers preview HEIC files using the same server-side decoder
+        used for the final upload.
+        """
+        allowed = current_app.config["ALLOWED_MIME_TYPES"]
+        file_storage.seek(0)
+        raw = file_storage.read()
+        detected_mime = magic.from_buffer(raw, mime=True)
+        if detected_mime not in allowed:
+            raise ValueError(f"Unsupported file type: {detected_mime}.")
+
+        img = ImageOps.exif_transpose(Image.open(io.BytesIO(raw)))
+        if img.mode != "RGB":
+            img = img.convert("RGB")
+        img.thumbnail(
+            (self.PREVIEW_MAX_DIMENSION, self.PREVIEW_MAX_DIMENSION),
+            Image.Resampling.LANCZOS,
+        )
+        preview = io.BytesIO()
+        img.save(preview, format="JPEG", quality=self.JPEG_QUALITY_ORIGINAL)
+        preview.seek(0)
+        return preview
 
     def get_photo(self, photo_id: int) -> Optional[Photo]:
         """Fetches a single Photo by its ID."""
@@ -90,21 +127,21 @@ class PhotoService:
 
     def get_plant_photos(self, plant_id: int) -> List[Photo]:
         """Returns only the photos that belong directly to the Plant
-        (NOT including photos from the plant's care logs), ordered by position.
+        (NOT including photos from the plant's care logs), ordered by capture time.
         """
         return (
             self.db.query(Photo)
             .filter_by(plant_id=plant_id)
-            .order_by(Photo.position.asc(), Photo.created_at.asc())
+            .order_by(Photo.taken_at.asc(), Photo.created_at.asc())
             .all()
         )
 
     def get_care_log_photos(self, care_log_id: int) -> List[Photo]:
-        """Returns all photos for a single PlantCare log, ordered by position."""
+        """Returns all photos for a single PlantCare log, ordered by capture time."""
         return (
             self.db.query(Photo)
             .filter_by(care_log_id=care_log_id)
-            .order_by(Photo.position.asc(), Photo.created_at.asc())
+            .order_by(Photo.taken_at.asc(), Photo.created_at.asc())
             .all()
         )
 
@@ -124,37 +161,40 @@ class PhotoService:
         """Returns a unified gallery for a Plant: the Plant's own photos plus
         every photo attached to any of its care logs.
 
-        Plant photos are ordered by position (so reorder/cover works) and come
-        first. Care log photos are appended after, grouped by care log (newest
-        log first).
+        The featured plant photo is pinned first. All remaining direct and care
+        log photos form one chronological timeline.
         """
-        results: List[dict] = []
+        featured: Optional[dict] = None
+        timeline: List[tuple[datetime, dict]] = []
 
-        # Plant's own photos — already sorted by position (cover first)
         for photo in self.get_plant_photos(plant_id):
-            results.append(self._serialize_photo(photo, source_type="plant"))
+            serialized = self._serialize_photo(photo, source_type="plant")
+            if photo.position == 0 and featured is None:
+                featured = serialized
+            else:
+                timeline.append((photo.taken_at, serialized))
 
         # Photos from each care log, with care metadata for context
-        care_logs = (
-            self.db.query(PlantCare)
-            .filter_by(plant_id=plant_id)
-            .order_by(PlantCare.care_date.desc())
-            .all()
-        )
+        care_logs = self.db.query(PlantCare).filter_by(plant_id=plant_id).all()
         for log in care_logs:
             for photo in self.get_care_log_photos(log.id):  # type: ignore[arg-type]
-                results.append(
-                    self._serialize_photo(
-                        photo,
-                        source_type="care_log",
-                        care_log_id=log.id,  # type: ignore[arg-type]
-                        care_type=log.care_type.name if log.care_type else None,
-                        care_date=log.care_date.isoformat() if log.care_date else None,  # type: ignore
-                        note=log.note,  # type: ignore[arg-type]
+                timeline.append(
+                    (
+                        photo.taken_at,
+                        self._serialize_photo(
+                            photo,
+                            source_type="care_log",
+                            care_log_id=log.id,  # type: ignore[arg-type]
+                            care_type=log.care_type.name if log.care_type else None,
+                            care_date=log.care_date.isoformat() if log.care_date else None,  # type: ignore
+                            note=log.note,  # type: ignore[arg-type]
+                        ),
                     )
                 )
 
-        return results
+        timeline.sort(key=lambda item: item[0])
+        results = [photo for _, photo in timeline]
+        return [featured, *results] if featured else results
 
     # --- REORDER / DELETE ---
 
@@ -179,6 +219,62 @@ class PhotoService:
             self.db.rollback()
             raise
         return photo
+
+    def update_taken_at(self, photo_id: int, taken_at: datetime) -> Optional[Photo]:
+        """Updates a photo's timeline timestamp."""
+        photo = self.get_photo(photo_id)
+        if not photo:
+            return None
+        photo.taken_at = taken_at
+        try:
+            self.db.commit()
+            self.db.refresh(photo)
+        except IntegrityError:
+            self.db.rollback()
+            raise
+        return photo
+
+    def make_featured(self, photo_id: int) -> Optional[Photo]:
+        """Moves one plant photo to the cover position."""
+        photo = self.get_photo(photo_id)
+        if not photo or photo.plant_id is None:
+            return None
+
+        self.move_to_front([photo_id])
+        self.db.refresh(photo)
+        return photo
+
+    def move_to_front(self, photo_ids: List[int]) -> None:
+        """Places plant photos first in the supplied order."""
+        if not photo_ids:
+            return
+
+        photos_by_id = {
+            photo.id: photo
+            for photo in self.db.query(Photo).filter(Photo.id.in_(photo_ids)).all()
+        }
+        photos = [photos_by_id[photo_id] for photo_id in photo_ids if photo_id in photos_by_id]
+        if not photos or any(photo.plant_id != photos[0].plant_id for photo in photos):
+            return
+
+        try:
+            (
+                self.db.query(Photo)
+                .filter(
+                    Photo.plant_id == photos[0].plant_id,
+                    Photo.id.notin_(photo_ids),
+                )
+                .update(
+                    {Photo.position: Photo.position + len(photos)},
+                    synchronize_session=False,
+                )
+            )
+            for position, photo in enumerate(photos):
+                photo.position = position
+            self.db.commit()
+        except IntegrityError:
+            self.db.rollback()
+            raise
 
     def delete_photo(self, photo_id: int) -> bool:
         """Deletes a Photo row and its on-disk files (original + thumbnail).
@@ -282,7 +378,12 @@ class PhotoService:
 
     # --- INTERNALS ---
 
-    def _process_and_save(self, file_storage: FileStorage, target_dir: str) -> dict:
+    def _process_and_save(
+        self,
+        file_storage: FileStorage,
+        target_dir: str,
+        taken_at: Optional[datetime] = None,
+    ) -> dict:
         """Reads, validates, processes, and saves a single upload to disk.
 
         Always stores the result as JPEG (HEIC/HEIF/PNG/etc converted) for
@@ -314,6 +415,11 @@ class PhotoService:
 
         # Open with Pillow
         img = Image.open(io.BytesIO(raw))
+        taken_at = taken_at or self._exif_taken_at(img)
+        if not taken_at:
+            raise ValueError(
+                "No photo date found. Choose a date or upload an image with camera metadata."
+            )
         img = ImageOps.exif_transpose(img)
 
         # Capture original dimensions
@@ -355,6 +461,7 @@ class PhotoService:
             "size_bytes": size_on_disk,
             "width": original_width,
             "height": original_height,
+            "taken_at": taken_at,
         }
 
     def _create_photo_row(self, meta: dict) -> Photo:
@@ -384,6 +491,23 @@ class PhotoService:
             return 0
         current_max = q.scalar()
         return (current_max if current_max is not None else -1) + 1
+
+    @staticmethod
+    def _exif_taken_at(img: Image.Image) -> Optional[datetime]:
+        """Reads the original capture timestamp from the image EXIF data."""
+        try:
+            exif = img.getexif()
+            exif_ifd = exif.get_ifd(0x8769)
+            # DateTime (0x0132) describes when a file was modified. Exporters such
+            # as Immich can rewrite it, so only trust camera capture timestamps.
+            value = exif_ifd.get(0x9003) or exif_ifd.get(0x9004)
+            if isinstance(value, bytes):
+                value = value.decode(errors="ignore")
+            if isinstance(value, str):
+                return datetime.strptime(value.strip(), "%Y:%m:%d %H:%M:%S")
+        except (AttributeError, KeyError, TypeError, ValueError):
+            pass
+        return None
 
     @staticmethod
     def _thumb_name(filename: str) -> str:
@@ -421,6 +545,7 @@ class PhotoService:
             "width": photo.width,
             "height": photo.height,
             "position": photo.position,
+            "taken_at": photo.taken_at.isoformat() if photo.taken_at else None,
             "created_at": photo.created_at.isoformat() if photo.created_at else None,  # type: ignore
             "source": {"type": source_type},
         }

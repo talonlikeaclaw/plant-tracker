@@ -1,6 +1,7 @@
 import os
+from datetime import datetime
 
-from flask import Blueprint, jsonify, request, send_from_directory
+from flask import Blueprint, jsonify, request, send_file, send_from_directory
 from flask_jwt_extended import jwt_required
 from werkzeug.datastructures import FileStorage
 
@@ -51,12 +52,32 @@ def _verify_care_log_ownership(
 # --- PLANT PHOTO ENDPOINTS ---
 
 
+@photo_bp.route("/preview", methods=["POST"])
+@jwt_required()
+@require_user_id
+def preview_photo(user_id):
+    """Returns an in-memory JPEG preview for a prospective upload."""
+    db = SessionLocal()
+    try:
+        file = request.files.get("file")
+        if not file or not file.filename:
+            return jsonify({"error": "No file provided."}), 400
+        preview = PhotoService(db).create_preview(file)
+        return send_file(preview, mimetype="image/jpeg", max_age=0)
+    except ValueError as error:
+        return jsonify({"error": str(error)}), 400
+    except Exception:
+        return jsonify({"error": "Could not create a preview for this image."}), 400
+    finally:
+        db.close()
+
+
 @photo_bp.route("/plant/<int:plant_id>", methods=["GET"])
 @jwt_required()
 @require_user_id
 def get_plant_photos(user_id, plant_id):
     """Returns the aggregated gallery for a Plant: its own photos plus all
-    photos attached to any of its care logs, sorted newest first.
+    photos attached to any of its care logs, in chronological order after cover.
     """
     db = SessionLocal()
     try:
@@ -81,7 +102,8 @@ def get_plant_photos(user_id, plant_id):
 @require_user_id
 def upload_plant_photos(user_id, plant_id):
     """Uploads one or more photos to a Plant. Accepts multipart/form-data
-    with field name `file` (single) or `files` (multiple).
+    with field name `file` (single) or `files` (multiple). Pass
+    `featured_index=<index>` to make a selected uploaded photo the plant's cover photo.
     """
     db = SessionLocal()
     try:
@@ -98,15 +120,31 @@ def upload_plant_photos(user_id, plant_id):
                 {"error": "No files provided. Use field 'file' or 'files'."}
             ), 400
 
-        created, errors = [], []
-        for f in files:
+        taken_at_values = request.form.getlist("taken_at")
+        if taken_at_values and len(taken_at_values) != len(files):
+            return jsonify({"error": "Each uploaded photo needs its own date field."}), 400
+
+        taken_ats = [_parse_taken_at(value) for value in taken_at_values] or [None] * len(files)
+        created, errors, created_by_index = [], [], {}
+        for index, (f, taken_at) in enumerate(zip(files, taken_ats)):
             try:
-                photo = photo_service.upload_plant_photo(plant_id, f)
+                photo = photo_service.upload_plant_photo(plant_id, f, taken_at)
                 created.append(_serialize_created(photo, owner_type="plant"))
+                created_by_index[index] = photo.id
             except ValueError as ve:
-                errors.append({"filename": f.filename, "error": str(ve)})
+                errors.append({"index": index, "filename": f.filename, "error": str(ve)})
             except Exception as e:
-                errors.append({"filename": f.filename, "error": str(e)})
+                errors.append({"index": index, "filename": f.filename, "error": str(e)})
+
+        featured_index = _parse_featured_index(request.form.get("featured_index"), len(files))
+        if featured_index is not None and featured_index in created_by_index:
+            photo_service.make_featured(created_by_index[featured_index])
+            created = [
+                _serialize_created(
+                    photo_service.get_photo(photo["id"]), owner_type="plant"
+                )
+                for photo in created
+            ]
 
         return (
             jsonify(
@@ -188,14 +226,14 @@ def upload_care_log_photos(user_id, care_log_id):
             ), 400
 
         created, errors = [], []
-        for f in files:
+        for index, f in enumerate(files):
             try:
                 photo = photo_service.upload_care_log_photo(care_log_id, f)
                 created.append(_serialize_created(photo, owner_type="care_log"))
             except ValueError as ve:
-                errors.append({"filename": f.filename, "error": str(ve)})
+                errors.append({"index": index, "filename": f.filename, "error": str(ve)})
             except Exception as e:
-                errors.append({"filename": f.filename, "error": str(e)})
+                errors.append({"index": index, "filename": f.filename, "error": str(e)})
 
         return (
             jsonify(
@@ -221,8 +259,8 @@ def upload_care_log_photos(user_id, care_log_id):
 @jwt_required()
 @require_user_id
 def update_photo(user_id, photo_id):
-    """Updates a photo's position (used for plant cover/reorder).
-    Body: {"position": <int>}
+    """Updates a photo's featured state, position, or timeline date.
+    Body: {"featured": true}, {"taken_at": "YYYY-MM-DD"}, or {"position": <int>}
     """
     db = SessionLocal()
     try:
@@ -236,11 +274,23 @@ def update_photo(user_id, photo_id):
             return jsonify({"error": "Unauthorized access to this photo."}), 403
 
         data = request.get_json(silent=True) or {}
-        position = data.get("position")
-        if position is None or not isinstance(position, int):
-            return jsonify({"error": "Field 'position' (int) is required."}), 400
-
-        updated = photo_service.update_position(photo_id, position)
+        if data.get("featured") is True:
+            updated = photo_service.make_featured(photo_id)
+        elif "taken_at" in data:
+            try:
+                taken_at = _parse_taken_at(data["taken_at"])
+            except ValueError as error:
+                return jsonify({"error": str(error)}), 400
+            if not taken_at:
+                return jsonify({"error": "Field 'taken_at' is required."}), 400
+            updated = photo_service.update_taken_at(photo_id, taken_at)
+        else:
+            position = data.get("position")
+            if position is None or not isinstance(position, int):
+                return jsonify(
+                    {"error": "Field 'position' (int) is required."}
+                ), 400
+            updated = photo_service.update_position(photo_id, position)
         if not updated:
             return jsonify({"error": "Photo was not updated."}), 500
 
@@ -251,6 +301,7 @@ def update_photo(user_id, photo_id):
                     "photo": {
                         "id": updated.id,
                         "position": updated.position,
+                        "taken_at": updated.taken_at.isoformat(),
                     },
                 }
             ),
@@ -346,6 +397,29 @@ def _collect_uploaded_files() -> list[FileStorage]:
     return [f for f in files if f and f.filename]
 
 
+def _parse_taken_at(value: str | None) -> datetime | None:
+    """Parses the optional date selected by the user for an upload batch."""
+    if not value:
+        return None
+    try:
+        return datetime.strptime(value, "%Y-%m-%d")
+    except ValueError as error:
+        raise ValueError("Field 'taken_at' must use YYYY-MM-DD format.") from error
+
+
+def _parse_featured_index(value: str | None, file_count: int) -> int | None:
+    """Parses the optional zero-based index of the uploaded cover photo."""
+    if value is None or value == "":
+        return None
+    try:
+        index = int(value)
+    except ValueError as error:
+        raise ValueError("Field 'featured_index' must be a valid photo index.") from error
+    if not 0 <= index < file_count:
+        raise ValueError("Field 'featured_index' must refer to an uploaded photo.")
+    return index
+
+
 def _serialize_created(photo, owner_type: str) -> dict:
     """Serializes a freshly-created Photo row with the essentials the frontend
     needs immediately after upload.
@@ -359,6 +433,7 @@ def _serialize_created(photo, owner_type: str) -> dict:
         "width": photo.width,
         "height": photo.height,
         "position": photo.position,
+        "taken_at": photo.taken_at.isoformat() if photo.taken_at else None,
         "created_at": photo.created_at.isoformat() if photo.created_at else None,  # type: ignore
     }
 
@@ -374,6 +449,7 @@ def _serialize_with_source(photo, source_type: str) -> dict:
         "width": photo.width,
         "height": photo.height,
         "position": photo.position,
+        "taken_at": photo.taken_at.isoformat() if photo.taken_at else None,
         "created_at": photo.created_at.isoformat() if photo.created_at else None,  # type: ignore
         "source": {"type": source_type},
     }
