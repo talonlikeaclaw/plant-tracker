@@ -1,6 +1,5 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
-import { CameraIcon, XIcon } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -15,6 +14,7 @@ import { PlantSelect } from "@/components/forms/plant-select";
 import { CareTypeSelect } from "@/components/forms/care-type-select";
 import { createCareLog } from "@/api/careLogs";
 import { uploadCareLogPhotos } from "@/api/photos";
+import { PhotoPicker, type SelectedPhoto } from "@/components/photos/photo-picker";
 import type { Plant, CareType } from "@/types";
 import { getTodayLocal, getErrorMessage } from "@/lib/utils";
 
@@ -48,37 +48,8 @@ export function SinglePlantForm({
   const [submitting, setSubmitting] = useState(false);
 
   // Photo selection
-  const [selectedFiles, setSelectedFiles] = useState<
-    { file: File; preview: string }[]
-  >([]);
-  const filesRef = useRef(selectedFiles);
-  filesRef.current = selectedFiles;
-
-  useEffect(() => {
-    return () =>
-      filesRef.current.forEach((f) => URL.revokeObjectURL(f.preview));
-  }, []);
-
-  const addFiles = (fileList: FileList | null) => {
-    if (!fileList) return;
-    const newItems = Array.from(fileList).map((file) => ({
-      file,
-      preview: URL.createObjectURL(file),
-    }));
-    setSelectedFiles((prev) => [...prev, ...newItems]);
-  };
-
-  const removeFile = (idx: number) => {
-    setSelectedFiles((prev) => {
-      URL.revokeObjectURL(prev[idx].preview);
-      return prev.filter((_, i) => i !== idx);
-    });
-  };
-
-  const clearFiles = () => {
-    selectedFiles.forEach((f) => URL.revokeObjectURL(f.preview));
-    setSelectedFiles([]);
-  };
+  const [selectedFiles, setSelectedFiles] = useState<SelectedPhoto[]>([]);
+  const [pendingCareLogId, setPendingCareLogId] = useState<number | null>(null);
 
   // Pre-select plant from URL query parameter once plants are loaded
   useEffect(() => {
@@ -111,23 +82,31 @@ export function SinglePlantForm({
       if (form.care_date) logData.care_date = form.care_date;
       if (form.note) logData.note = form.note;
 
-      const result = await createCareLog(logData);
+      const careLogId = pendingCareLogId ?? (await createCareLog(logData)).care_log.id;
 
       // Upload photos if any were selected
       if (selectedFiles.length > 0) {
         try {
-          await uploadCareLogPhotos(
-            result.care_log.id,
+          const uploadResult = await uploadCareLogPhotos(
+            careLogId,
             selectedFiles.map((f) => f.file),
           );
+          if (uploadResult.errors.length > 0) {
+            const failed = new Map(uploadResult.errors.map((item) => [item.index, item.error]));
+            setSelectedFiles(selectedFiles.flatMap((item, index) => failed.has(index) ? [{ ...item, uploadError: failed.get(index) }] : []));
+            setPendingCareLogId(careLogId);
+            onSuccess(`Care logged. ${uploadResult.photos.length} photo${uploadResult.photos.length === 1 ? "" : "s"} uploaded; correct the remaining files and retry.`);
+            return;
+          }
         } catch {
-          clearFiles();
-          onSuccess("Care logged, but photo upload failed.");
+          setPendingCareLogId(careLogId);
+          onError("Care was logged, but the photo upload did not complete. Your selected photos are ready to retry.");
           return;
         }
       }
 
-      clearFiles();
+      setSelectedFiles([]);
+      setPendingCareLogId(null);
 
       // Reset form
       setForm({
@@ -208,49 +187,14 @@ export function SinglePlantForm({
             />
           </div>
 
-          {/* Photos */}
           <div className="space-y-2">
             <Label>Photos (Optional)</Label>
-            <div className="flex flex-wrap gap-2">
-              {selectedFiles.map((item, idx) => (
-                <div
-                  key={item.preview}
-                  className="group relative h-16 w-16 overflow-hidden rounded-lg"
-                >
-                  <img
-                    src={item.preview}
-                    alt=""
-                    className="h-full w-full object-cover"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => removeFile(idx)}
-                    className="absolute right-0.5 top-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-destructive-foreground opacity-0 transition-opacity group-hover:opacity-100"
-                  >
-                    <XIcon className="h-3 w-3" />
-                  </button>
-                </div>
-              ))}
-              <label className="flex h-16 w-16 cursor-pointer items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/30 transition-colors hover:border-muted-foreground/50">
-                <input
-                  type="file"
-                  multiple
-                  accept="image/jpeg,image/png,image/webp,image/heic,.heic,.heif"
-                  className="hidden"
-                  onChange={(e) => {
-                    addFiles(e.target.files);
-                    e.target.value = "";
-                  }}
-                  disabled={busy}
-                />
-                <CameraIcon className="h-5 w-5 text-muted-foreground" />
-              </label>
-            </div>
+            <PhotoPicker items={selectedFiles} onChange={setSelectedFiles} disabled={busy} />
           </div>
 
           {/* Submit */}
           <Button type="submit" disabled={busy} className="w-full">
-            {submitting ? "Logging..." : "Log Care"}
+            {submitting ? "Saving..." : pendingCareLogId ? "Retry Photo Upload" : "Log Care"}
           </Button>
         </form>
       </CardContent>

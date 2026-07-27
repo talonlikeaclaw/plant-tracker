@@ -1,14 +1,11 @@
 import { useState } from "react";
-import {
-  Trash2Icon,
-  ImageIcon,
-  ChevronUpIcon,
-  ChevronDownIcon,
-} from "lucide-react";
+import { Trash2Icon, ImageIcon, StarIcon } from "lucide-react";
 import { format } from "date-fns";
 import { AuthImage } from "@/components/photos/auth-image";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Dialog,
   DialogContent,
@@ -20,10 +17,12 @@ import type { PhotoWithSource, PhotoSource } from "@/types";
 
 interface PhotoGalleryProps {
   photos: PhotoWithSource[];
-  /** If provided, a delete button appears on each photo (hover + lightbox) */
+  /** If provided, a delete button appears in the photo viewer */
   onDelete?: (photoId: number) => void;
-  /** If provided, up/down arrows appear on plant-source photos for reordering */
-  onReorder?: (photoId: number, direction: "up" | "down") => void;
+  /** If provided, plant photos can be selected as the cover photo */
+  onSetCover?: (photoId: number) => void;
+  /** If provided, photo dates can be corrected in the photo viewer */
+  onUpdateTakenAt?: (photoId: number, takenAt: string) => void;
   className?: string;
 }
 
@@ -40,10 +39,17 @@ function getSourceLabel(source: PhotoSource): string {
 export function PhotoGallery({
   photos,
   onDelete,
-  onReorder,
+  onSetCover,
+  onUpdateTakenAt,
   className,
 }: PhotoGalleryProps) {
   const [selected, setSelected] = useState<PhotoWithSource | null>(null);
+  const [takenAt, setTakenAt] = useState("");
+
+  const selectPhoto = (photo: PhotoWithSource) => {
+    setSelected(photo);
+    setTakenAt(photo.taken_at?.slice(0, 10) ?? "");
+  };
 
   if (photos.length === 0) {
     return (
@@ -68,86 +74,36 @@ export function PhotoGallery({
         )}
       >
         {photos.map((photo) => (
-          <button
+          <div
             key={photo.id}
-            type="button"
-            onClick={() => setSelected(photo)}
             className="group relative aspect-square overflow-hidden rounded-lg bg-muted focus:outline-none focus:ring-2 focus:ring-ring"
           >
-            <AuthImage
-              photoId={photo.id}
-              thumb
-              className="h-full w-full object-cover transition-transform group-hover:scale-105"
-            />
-            {/* Hover overlay */}
-            <div className="absolute inset-0 bg-black/0 transition-colors group-hover:bg-black/20" />
-            {/* Source badge */}
+            <button
+              type="button"
+              onClick={() => selectPhoto(photo)}
+              className="absolute inset-0"
+              aria-label={`View ${photo.original_filename || "photo"}`}
+            >
+              <AuthImage
+                photoId={photo.id}
+                thumb
+                className="h-full w-full object-cover"
+              />
+            </button>
+            <div className="pointer-events-none absolute inset-0 bg-black/0 transition-colors group-hover:bg-black/20" />
             <Badge
               variant="secondary"
-              className="absolute left-1 top-1 max-w-[calc(100%-0.5rem)] truncate text-xs"
+              className="pointer-events-none absolute left-1 top-1 max-w-[calc(100%-0.5rem)] truncate text-xs"
             >
               {getSourceLabel(photo.source)}
             </Badge>
-            {/* Delete button */}
-            {onDelete && (
-              <span
-                role="button"
-                tabIndex={0}
-                className="absolute right-1 top-1 flex h-7 w-7 items-center justify-center rounded-full bg-destructive text-destructive-foreground opacity-0 transition-opacity hover:bg-destructive/90 group-hover:opacity-100 focus:opacity-100 focus:outline-none"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onDelete(photo.id);
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.stopPropagation();
-                    onDelete(photo.id);
-                  }
-                }}
-              >
-                <Trash2Icon className="h-3.5 w-3.5" />
-              </span>
+            {photo.source.type === "plant" && photo.position === 0 && (
+              <Badge variant="success" className="pointer-events-none absolute bottom-1 left-1 text-xs">
+                <StarIcon className="mr-1 h-3 w-3 fill-current" />
+                Cover
+              </Badge>
             )}
-            {/* Reorder arrows (plant photos only) */}
-            {onReorder && photo.source.type === "plant" && (
-              <div className="absolute bottom-1 left-1 flex gap-0.5 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
-                <span
-                  role="button"
-                  tabIndex={0}
-                  className="flex h-6 w-6 items-center justify-center rounded bg-black/60 text-white hover:bg-black/80"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onReorder(photo.id, "up");
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                      e.stopPropagation();
-                      onReorder(photo.id, "up");
-                    }
-                  }}
-                >
-                  <ChevronUpIcon className="h-3.5 w-3.5" />
-                </span>
-                <span
-                  role="button"
-                  tabIndex={0}
-                  className="flex h-6 w-6 items-center justify-center rounded bg-black/60 text-white hover:bg-black/80"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onReorder(photo.id, "down");
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                      e.stopPropagation();
-                      onReorder(photo.id, "down");
-                    }
-                  }}
-                >
-                  <ChevronDownIcon className="h-3.5 w-3.5" />
-                </span>
-              </div>
-            )}
-          </button>
+          </div>
         ))}
       </div>
 
@@ -158,7 +114,7 @@ export function PhotoGallery({
           if (!open) setSelected(null);
         }}
       >
-        <DialogContent className="max-w-3xl">
+        <DialogContent className="max-h-[calc(100dvh-2rem)] max-w-3xl overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="sr-only">Photo viewer</DialogTitle>
           </DialogHeader>
@@ -166,17 +122,17 @@ export function PhotoGallery({
             <div className="space-y-3">
               <AuthImage
                 photoId={selected.id}
-                className="w-full rounded-lg"
+                className="max-h-[60dvh] w-full rounded-lg object-contain"
                 alt={selected.original_filename || "Plant photo"}
               />
-              <div className="flex items-center justify-between gap-2">
+              <div className="space-y-3">
                 <div className="min-w-0 space-y-1">
                   <Badge variant="secondary" className="text-xs">
                     {getSourceLabel(selected.source)}
                   </Badge>
-                  {selected.created_at && (
+                  {selected.taken_at && (
                     <p className="text-xs text-muted-foreground">
-                      {format(new Date(selected.created_at), "MMM d, yyyy")}
+                      Taken {format(new Date(selected.taken_at), "PPP")}
                     </p>
                   )}
                   {selected.original_filename && (
@@ -185,19 +141,60 @@ export function PhotoGallery({
                     </p>
                   )}
                 </div>
-                {onDelete && (
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => {
-                      onDelete(selected.id);
-                      setSelected(null);
-                    }}
-                  >
-                    <Trash2Icon className="mr-1.5 h-3.5 w-3.5" />
-                    Delete
-                  </Button>
+                {onUpdateTakenAt && (
+                  <div className="flex flex-wrap items-end gap-2">
+                    <div className="grid gap-1.5">
+                      <Label htmlFor="selected-photo-date">Photo date</Label>
+                      <Input
+                        id="selected-photo-date"
+                        type="date"
+                        value={takenAt}
+                        onChange={(event) => setTakenAt(event.target.value)}
+                      />
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={!takenAt || takenAt === selected.taken_at?.slice(0, 10)}
+                      onClick={() => {
+                        onUpdateTakenAt(selected.id, takenAt);
+                        setSelected(null);
+                      }}
+                    >
+                      Save date
+                    </Button>
+                  </div>
                 )}
+                <div className="flex flex-wrap gap-2">
+                  {onSetCover &&
+                    selected.source.type === "plant" && (
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        disabled={selected.position === 0}
+                        onClick={() => {
+                          onSetCover(selected.id);
+                          setSelected(null);
+                        }}
+                      >
+                        <StarIcon className="mr-1.5 h-3.5 w-3.5" />
+                        {selected.position === 0 ? "Cover photo" : "Set as cover"}
+                      </Button>
+                    )}
+                  {onDelete && (
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => {
+                        onDelete(selected.id);
+                        setSelected(null);
+                      }}
+                    >
+                      <Trash2Icon className="mr-1.5 h-3.5 w-3.5" />
+                      Delete
+                    </Button>
+                  )}
+                </div>
               </div>
             </div>
           )}
