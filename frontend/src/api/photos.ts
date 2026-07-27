@@ -5,7 +5,7 @@ import type { Photo, PhotoWithSource } from "@/types";
 export interface UploadPhotosResponse {
   message: string;
   photos: Photo[];
-  errors: { filename: string; error: string }[];
+  errors: { index: number; filename: string; error: string }[];
 }
 
 // Get aggregated gallery for a plant (plant photos + all care log photos)
@@ -20,11 +20,28 @@ export async function getPlantPhotos(
 export async function uploadPlantPhotos(
   plantId: number,
   files: File[],
+  featuredIndex?: number,
+  takenAts?: (string | undefined)[],
 ): Promise<UploadPhotosResponse> {
   const formData = new FormData();
   files.forEach((file) => formData.append("files", file));
+  if (featuredIndex !== undefined && featuredIndex >= 0) {
+    formData.append("featured_index", String(featuredIndex));
+  }
+  takenAts?.forEach((takenAt) => formData.append("taken_at", takenAt ?? ""));
   const res = await api.post(`/photos/plant/${plantId}`, formData, {
     headers: { "Content-Type": "multipart/form-data" },
+  });
+  return res.data;
+}
+
+// Convert a prospective HEIC/HEIF upload to a temporary JPEG preview.
+export async function fetchPhotoPreview(file: File): Promise<Blob> {
+  const formData = new FormData();
+  formData.append("file", file);
+  const res = await api.post("/photos/preview", formData, {
+    headers: { "Content-Type": "multipart/form-data" },
+    responseType: "blob",
   });
   return res.data;
 }
@@ -53,6 +70,18 @@ export async function uploadCareLogPhotos(
 // Update a photo's position (reorder / cover selection)
 export async function updatePhotoPosition(photoId: number, position: number) {
   const res = await api.patch(`/photos/${photoId}`, { position });
+  return res.data;
+}
+
+// Make a plant photo the featured cover photo.
+export async function makePhotoFeatured(photoId: number) {
+  const res = await api.patch(`/photos/${photoId}`, { featured: true });
+  return res.data;
+}
+
+// Correct the date a photo was taken for chronological gallery ordering.
+export async function updatePhotoTakenAt(photoId: number, takenAt: string) {
+  const res = await api.patch(`/photos/${photoId}`, { taken_at: takenAt });
   return res.data;
 }
 

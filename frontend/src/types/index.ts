@@ -93,6 +93,7 @@ export interface Photo {
   width?: number;
   height?: number;
   position?: number;
+  taken_at?: string;
   created_at?: string;
 }
 
