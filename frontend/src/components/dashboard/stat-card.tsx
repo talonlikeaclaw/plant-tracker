@@ -11,6 +11,7 @@ interface StatCardProps {
   description: string;
   value: number | string;
   loading?: boolean;
+  onClick: () => void;
 }
 
 /**
@@ -23,9 +24,21 @@ export function StatCard({
   description,
   value,
   loading,
+  onClick,
 }: StatCardProps) {
   return (
-    <Card>
+    <Card
+      role="button"
+      tabIndex={0}
+      onClick={onClick}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          onClick();
+        }
+      }}
+      className="cursor-pointer transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+    >
       <CardHeader>
         <CardTitle>{title}</CardTitle>
         <CardDescription>{description}</CardDescription>

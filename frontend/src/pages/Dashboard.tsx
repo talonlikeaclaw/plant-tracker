@@ -158,24 +158,28 @@ export default function Dashboard() {
             description="Plants in your collection"
             value={plants.length}
             loading={isLoading}
+            onClick={() => navigate("/plants")}
           />
           <StatCard
             title="Species Tracked"
             description="Unique species varieties"
             value={speciesCount}
             loading={isLoading}
+            onClick={() => navigate("/species")}
           />
           <StatCard
             title="Upcoming Tasks"
             description="Care activities due soon"
             value={upcomingLogs.length}
             loading={isLoading}
+            onClick={() => navigate("/care-plans")}
           />
           <StatCard
             title="Care History"
             description="Total logged activities"
             value={careLogs.length}
             loading={isLoading}
+            onClick={() => navigate("/log-care")}
           />
         </div>
       </section>
