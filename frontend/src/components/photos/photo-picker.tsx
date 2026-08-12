@@ -4,7 +4,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { cn } from "@/lib/utils";
+import { cn, getTodayLocal } from "@/lib/utils";
 import { fetchPhotoPreview } from "@/api/photos";
 
 export interface SelectedPhoto {
@@ -184,7 +184,7 @@ export function PhotoPicker({
             <div className="flex flex-wrap items-end gap-2">
               <div className="grid gap-1.5">
                 <Label htmlFor="photo-batch-date">Date for all photos</Label>
-                <Input id="photo-batch-date" type="date" value={batchDate} disabled={disabled} onChange={(event) => setBatchDate(event.target.value)} />
+                <Input id="photo-batch-date" type="date" max={getTodayLocal()} value={batchDate} disabled={disabled} onChange={(event) => setBatchDate(event.target.value)} />
               </div>
               <Button type="button" variant="outline" size="sm" className="h-9" disabled={disabled || !batchDate} onClick={() => onChange(items.map((item) => ({ ...item, takenAt: batchDate, uploadError: undefined })))}>
                 Apply to all
@@ -225,7 +225,7 @@ export function PhotoPicker({
                 </div>
                 <p className="truncate text-xs text-muted-foreground" title={item.file.name}>{item.file.name}</p>
                   {item.isFeatured && <span className="sr-only">Selected as cover photo</span>}
-                {allowDates && <><Label htmlFor={`photo-date-${item.id}`} className="sr-only">Date for {item.file.name}</Label><Input id={`photo-date-${item.id}`} type="date" value={item.takenAt} disabled={disabled} onChange={(event) => update(item.id, { takenAt: event.target.value, uploadError: undefined })} /></>}
+                {allowDates && <><Label htmlFor={`photo-date-${item.id}`} className="sr-only">Date for {item.file.name}</Label><Input id={`photo-date-${item.id}`} type="date" max={getTodayLocal()} value={item.takenAt} disabled={disabled} onChange={(event) => update(item.id, { takenAt: event.target.value, uploadError: undefined })} /></>}
                 {item.uploadError && <p className="text-xs text-destructive">{item.uploadError}</p>}
               </div>
             ))}

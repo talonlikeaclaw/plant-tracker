@@ -46,14 +46,6 @@ export async function fetchPhotoPreview(file: File): Promise<Blob> {
   return res.data;
 }
 
-// Get photos for a single care log
-export async function getCareLogPhotos(
-  careLogId: number,
-): Promise<{ photos: PhotoWithSource[] }> {
-  const res = await api.get(`/photos/care-log/${careLogId}`);
-  return res.data;
-}
-
 // Upload one or more photos to a care log
 export async function uploadCareLogPhotos(
   careLogId: number,
@@ -64,12 +56,6 @@ export async function uploadCareLogPhotos(
   const res = await api.post(`/photos/care-log/${careLogId}`, formData, {
     headers: { "Content-Type": "multipart/form-data" },
   });
-  return res.data;
-}
-
-// Update a photo's position (reorder / cover selection)
-export async function updatePhotoPosition(photoId: number, position: number) {
-  const res = await api.patch(`/photos/${photoId}`, { position });
   return res.data;
 }
 

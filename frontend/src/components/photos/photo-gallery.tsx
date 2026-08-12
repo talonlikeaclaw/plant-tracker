@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { Trash2Icon, ImageIcon, StarIcon, XIcon } from "lucide-react";
-import { format } from "date-fns";
 import { AuthImage } from "@/components/photos/auth-image";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -14,7 +13,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { cn, parseLocalDate } from "@/lib/utils";
+import { cn, formatDate, getTodayLocal, parseLocalDate } from "@/lib/utils";
 import type { PhotoWithSource, PhotoSource } from "@/types";
 
 interface PhotoGalleryProps {
@@ -34,7 +33,7 @@ function getSourceLabel(source: PhotoSource): string {
   const parts: string[] = [];
   if (source.care_type) parts.push(source.care_type);
   if (source.care_date)
-    parts.push(format(parseLocalDate(source.care_date), "PP"));
+    parts.push(formatDate(parseLocalDate(source.care_date)));
   return parts.length > 0 ? parts.join(" · ") : "Care log";
 }
 
@@ -151,7 +150,7 @@ export function PhotoGallery({
                   </Badge>
                   {selected.taken_at && (
                     <span className="text-xs text-muted-foreground">
-                      Taken {format(new Date(selected.taken_at), "PPP")}
+                       Taken {formatDate(new Date(selected.taken_at), true)}
                     </span>
                   )}
                 </div>
@@ -168,6 +167,7 @@ export function PhotoGallery({
                         <Input
                           id="selected-photo-date"
                           type="date"
+                          max={getTodayLocal()}
                           value={takenAt}
                           onChange={(event) => setTakenAt(event.target.value)}
                           className="h-11 w-full"
