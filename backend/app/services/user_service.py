@@ -1,7 +1,7 @@
 from app.models import User
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
-from typing import Optional, List
+from typing import Optional
 from datetime import date
 
 
@@ -83,14 +83,6 @@ class UserService:
         """
         return self.db.query(User).filter_by(email=email).first()
 
-    def get_all_users(self) -> List[User]:
-        """Fetches all Users from the database.
-
-        Returns:
-            List[User] or []: All Users in a list or an empty list.
-        """
-        return self.db.query(User).all()
-
     def update_user(self, user_id: int, updates: dict) -> Optional[User]:
         """Updates fields of an existing User.
 
@@ -116,20 +108,3 @@ class UserService:
             self.db.rollback()
             raise
         return user
-
-    def delete_user(self, user_id: int) -> bool:
-        """Deletes a User from the database.
-
-        Args:
-            user_id (int): ID of the User to delete.
-
-        Returns:
-            bool: True if deleted, False if not found.
-        """
-        user = self.get_user_by_id(user_id)
-        if not user:
-            return False
-
-        self.db.delete(user)
-        self.db.commit()
-        return True

@@ -293,44 +293,6 @@ class PlantCareService:
             raise
         return care_plan
 
-    def log_from_care_plan(self, plan_id: int, note: Optional[str] = None) -> PlantCare:
-        """Creates a PlantCare log from a CarePlan via id.
-
-        Args:
-            plan_id (int): ID of the CarePlan to update.
-            note (str, optional): Addition note to include in the log.
-
-        Returns:
-            PlantCare or None: Created PlantCare log or None if not found.
-
-        Raises:
-            ValueError: If the CarePlan is not found.
-            IntegrityError: If DB commit fails.
-        """
-        care_plan = self.get_care_plan_by_id(plan_id)
-        if not care_plan:
-            return None
-
-        final_note = note or ""
-
-        care_log_data = {
-            "plant_id": care_plan.plant_id,
-            "care_type_id": care_plan.care_type_id,
-            "note": final_note,
-            "care_date": date.today(),
-        }
-
-        care_log = PlantCare(**care_log_data)
-        self.db.add(care_log)
-        try:
-            self.db.commit()
-            self.db.refresh(care_log)
-        except IntegrityError:
-            self.db.rollback()
-            raise
-
-        return care_log
-
     def delete_care_log(self, care_id: int) -> bool:
         """Deletes a care log from the database.
 

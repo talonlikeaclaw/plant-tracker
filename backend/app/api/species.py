@@ -1,6 +1,5 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required
-from app.decorators.auth import require_user_id
 from app.models.database import SessionLocal
 from app.services.species_service import SpeciesService
 
@@ -9,8 +8,7 @@ species_bp = Blueprint("species", __name__)
 
 @species_bp.route("", methods=["GET"])
 @jwt_required()
-@require_user_id
-def get_species(user_id):
+def get_species():
     """Gets all species in the database."""
     db = SessionLocal()
     species_service = SpeciesService(db)
@@ -44,8 +42,7 @@ def get_species(user_id):
 
 @species_bp.route("", methods=["POST"])
 @jwt_required()
-@require_user_id
-def create_species(user_id):
+def create_species():
     """Creates a new species."""
     db = SessionLocal()
     species_service = SpeciesService(db)
@@ -95,8 +92,7 @@ def create_species(user_id):
 
 @species_bp.route("/<int:species_id>", methods=["GET"])
 @jwt_required()
-@require_user_id
-def get_a_species(user_id, species_id):
+def get_a_species(species_id):
     """Gets a Species by its ID and returns its info.
 
     Args:
@@ -132,8 +128,7 @@ def get_a_species(user_id, species_id):
 
 @species_bp.route("/<int:species_id>", methods=["PATCH"])
 @jwt_required()
-@require_user_id
-def update_species(user_id, species_id):
+def update_species(species_id):
     """Updates a Species' information.
 
     Args:
@@ -186,8 +181,7 @@ def update_species(user_id, species_id):
 
 @species_bp.route("/<int:species_id>", methods=["DELETE"])
 @jwt_required()
-@require_user_id
-def delete_species(user_id, species_id):
+def delete_species(species_id):
     """Deletes a User's species.
 
     Args:

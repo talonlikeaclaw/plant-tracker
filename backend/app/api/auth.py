@@ -7,7 +7,7 @@ from flask_jwt_extended import (
 )
 from app.models.database import SessionLocal
 from app.services.user_service import UserService
-from app.services.auth_service import AuthService
+from werkzeug.security import check_password_hash, generate_password_hash
 
 auth_bp = Blueprint("auth", __name__)
 
@@ -17,7 +17,6 @@ def register():
     """Registers a new user and returns a JWT access token."""
     db = SessionLocal()
     user_service = UserService(db)
-    auth_service = AuthService(user_service)
 
     try:
         data = request.get_json()
@@ -34,7 +33,7 @@ def register():
             ), 400
 
         # Hash password
-        hashed_password = auth_service.hash_password(password)
+        hashed_password = generate_password_hash(password)
 
         # Create User
         new_user = user_service.create_user(
@@ -72,7 +71,6 @@ def login():
     """Authenticates user and returns a JWT access token."""
     db = SessionLocal()
     user_service = UserService(db)
-    auth_service = AuthService(user_service)
 
     try:
         data = request.get_json()
@@ -86,9 +84,9 @@ def login():
                             "The email and password fields are required"}), 400
 
         # Authenticate user
-        user = auth_service.authenticate_user(email, password)
+        user = user_service.get_user_by_email(email)
 
-        if not user:
+        if not user or not check_password_hash(user.password_hash, password):
             return jsonify({"error": "Invalid email or password"}), 401
 
         # Issue JWT tokens

@@ -15,7 +15,6 @@ import { PageLayout } from "@/components/layout/page-layout";
 import { SuccessAlert, ErrorAlert } from "@/components/feedback/status-alerts";
 import { PlantSelect } from "@/components/forms/plant-select";
 import { CareTypeSelect } from "@/components/forms/care-type-select";
-import { QuickAddCareTypeDialog } from "@/components/care/quick-add-care-type-dialog";
 import { SpeciesInfoCard } from "@/components/species/species-info-card";
 import { createCarePlan } from "@/api/carePlans";
 import {
@@ -46,7 +45,6 @@ export default function AddCarePlan() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
-  const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedPlant, setSelectedPlant] = useState<Plant | null>(null);
 
   const loadData = async () => {
@@ -117,12 +115,6 @@ export default function AddCarePlan() {
         note: `Based on ${plantSpecies.common_name} water requirements`,
       });
     }
-  };
-
-  // Get species for selected plant
-  const getSelectedPlantSpecies = (): Species | null => {
-    if (!selectedPlant) return null;
-    return species.find((s) => s.id === selectedPlant.species_id) || null;
   };
 
   useEffect(() => {
@@ -196,7 +188,9 @@ export default function AddCarePlan() {
     }
   };
 
-  const selectedSpecies = getSelectedPlantSpecies();
+  const selectedSpecies = selectedPlant
+    ? species.find((s) => s.id === selectedPlant.species_id) ?? null
+    : null;
 
   return (
     <PageLayout
@@ -259,14 +253,6 @@ export default function AddCarePlan() {
                 careTypes={careTypes}
                 disabled={loading}
                 showDescription
-              />
-              <QuickAddCareTypeDialog
-                open={dialogOpen}
-                onOpenChange={setDialogOpen}
-                onCreated={(newType) => {
-                  setCareTypes([...careTypes, newType]);
-                  setForm({ ...form, care_type_id: newType.id.toString() });
-                }}
               />
             </div>
 

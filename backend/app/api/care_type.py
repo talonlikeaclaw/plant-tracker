@@ -9,8 +9,7 @@ care_type_bp = Blueprint("care_type", __name__)
 
 @care_type_bp.route("/default", methods=["GET"])
 @jwt_required()
-@require_user_id
-def get_default_care_types(user_id):
+def get_default_care_types():
     """Gets all of the Care Types without a user_id."""
     db = SessionLocal()
     care_type_service = CareTypeService(db)
@@ -76,8 +75,7 @@ def get_user_care_types(user_id):
 
 @care_type_bp.route("/<int:care_type_id>", methods=["GET"])
 @jwt_required()
-@require_user_id
-def get_care_type_by_id(user_id, care_type_id):
+def get_care_type_by_id(care_type_id):
     """Gets a Care Type by its ID."""
     db = SessionLocal()
     care_type_service = CareTypeService(db)

@@ -1,7 +1,6 @@
-import { format } from "date-fns";
 import { Card, CardContent } from "@/components/ui/card";
 import { EmptyState } from "@/components/feedback/empty-state";
-import { parseLocalDate, getPlantName, getCareTypeName } from "@/lib/utils";
+import { formatDate, parseLocalDate, getPlantName, getCareTypeName } from "@/lib/utils";
 import type { CareLog, Plant, CareType } from "@/types";
 
 interface RecentCareLogsProps {
@@ -40,7 +39,7 @@ export function RecentCareLogs({
                     <p className="text-sm text-muted-foreground">
                       {getCareTypeName(careTypes, log.care_type_id)}
                       {log.care_date &&
-                        ` • ${format(parseLocalDate(log.care_date), "PPP")}`}
+                        ` • ${formatDate(parseLocalDate(log.care_date), true)}`}
                     </p>
                     {log.note && (
                       <p className="text-sm text-muted-foreground italic mt-1">

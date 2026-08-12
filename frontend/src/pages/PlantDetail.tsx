@@ -8,7 +8,6 @@ import {
   DropletIcon,
   CameraIcon,
 } from "lucide-react";
-import { format } from "date-fns";
 import {
   Card,
   CardContent,
@@ -38,7 +37,7 @@ import {
 import { getCareLogsByPlant } from "@/api/careLogs";
 import { useCareTypes } from "@/hooks/use-care-types";
 import type { Plant, Species, PhotoWithSource, CareLog } from "@/types";
-import { parseLocalDate, getSpeciesName } from "@/lib/utils";
+import { formatDate, parseLocalDate, getSpeciesName } from "@/lib/utils";
 
 export default function PlantDetail() {
   const { id } = useParams<{ id: string }>();
@@ -165,7 +164,7 @@ export default function PlantDetail() {
     );
   }
 
-  if (error || !plant) {
+  if (!plant) {
     return (
       <PageLayout title="" maxWidth="4xl" hideHeader>
         <Button
@@ -237,7 +236,7 @@ export default function PlantDetail() {
                 <div className="flex items-center gap-2 text-sm">
                   <CalendarIcon className="h-4 w-4 text-muted-foreground shrink-0" />
                   <span className="text-muted-foreground">
-                    Added {format(parseLocalDate(plant.date_added), "PP")}
+                    Added {formatDate(parseLocalDate(plant.date_added))}
                   </span>
                 </div>
               )}
@@ -246,7 +245,7 @@ export default function PlantDetail() {
                   <DropletIcon className="h-4 w-4 text-muted-foreground shrink-0" />
                   <span className="text-muted-foreground">
                     Last watered{" "}
-                    {format(parseLocalDate(plant.last_watered), "PP")}
+                    {formatDate(parseLocalDate(plant.last_watered))}
                   </span>
                 </div>
               )}

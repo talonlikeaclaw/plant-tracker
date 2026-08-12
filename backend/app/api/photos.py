@@ -1,5 +1,5 @@
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 
 from flask import Blueprint, jsonify, request, send_file, send_from_directory
 from flask_jwt_extended import jwt_required
@@ -402,9 +402,12 @@ def _parse_taken_at(value: str | None) -> datetime | None:
     if not value:
         return None
     try:
-        return datetime.strptime(value, "%Y-%m-%d")
+        taken_at = datetime.strptime(value, "%Y-%m-%d")
     except ValueError as error:
         raise ValueError("Field 'taken_at' must use YYYY-MM-DD format.") from error
+    if taken_at.date() > datetime.now(timezone.utc).date():
+        raise ValueError("Photo date cannot be in the future.")
+    return taken_at
 
 
 def _parse_featured_index(value: str | None, file_count: int) -> int | None:

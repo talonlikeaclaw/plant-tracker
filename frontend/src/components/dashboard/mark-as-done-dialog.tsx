@@ -1,6 +1,5 @@
-import { format } from "date-fns";
 import { ConfirmDialog } from "@/components/feedback/confirm-dialog";
-import { parseLocalDate } from "@/lib/utils";
+import { formatDate, parseLocalDate } from "@/lib/utils";
 import type { UpcomingCareLog } from "@/types";
 
 interface MarkAsDoneDialogProps {
@@ -47,7 +46,7 @@ export function MarkAsDoneDialog({
           </div>
           <div className="text-sm">
             <span className="font-medium">Due Date:</span>{" "}
-            {format(parseLocalDate(log.due_date), "PPP")}
+            {formatDate(parseLocalDate(log.due_date), true)}
           </div>
           {log.note && (
             <div className="text-sm">

@@ -260,38 +260,6 @@ class PhotoService:
             raise
         return photo
 
-    def move_to_front(self, photo_ids: List[int]) -> None:
-        """Places plant photos first in the supplied order."""
-        if not photo_ids:
-            return
-
-        photos_by_id = {
-            photo.id: photo
-            for photo in self.db.query(Photo).filter(Photo.id.in_(photo_ids)).all()
-        }
-        photos = [photos_by_id[photo_id] for photo_id in photo_ids if photo_id in photos_by_id]
-        if not photos or any(photo.plant_id != photos[0].plant_id for photo in photos):
-            return
-
-        try:
-            (
-                self.db.query(Photo)
-                .filter(
-                    Photo.plant_id == photos[0].plant_id,
-                    Photo.id.notin_(photo_ids),
-                )
-                .update(
-                    {Photo.position: Photo.position + len(photos)},
-                    synchronize_session=False,
-                )
-            )
-            for position, photo in enumerate(photos):
-                photo.position = position
-            self.db.commit()
-        except IntegrityError:
-            self.db.rollback()
-            raise
-
     def delete_photo(self, photo_id: int) -> bool:
         """Deletes a Photo row and its on-disk files (original + thumbnail).
 
@@ -431,11 +399,11 @@ class PhotoService:
 
         # Open with Pillow
         img = Image.open(io.BytesIO(raw))
-        taken_at = taken_at or self._exif_taken_at(img)
-        if not taken_at:
-            raise ValueError(
-                "No photo date found. Choose a date or upload an image with camera metadata."
-            )
+        taken_at = (
+            taken_at
+            or self._exif_taken_at(img)
+            or datetime.now(timezone.utc).replace(tzinfo=None)
+        )
         img = ImageOps.exif_transpose(img)
 
         # Capture original dimensions

@@ -3,7 +3,6 @@ services:
     build:
       context: .
       dockerfile: backend/Dockerfile
-    container_name: planttracker-backend
     ports:
       - "5000:5000"
     env_file:
@@ -13,8 +12,6 @@ services:
     volumes:
       - /uploads:/app/uploads
     restart: unless-stopped
-    # depends_on:
-    #   - db
 
   frontend:
     build:
@@ -22,25 +19,8 @@ services:
       dockerfile: frontend/Dockerfile
       args:
         VITE_API_URL: ${VITE_API_URL:-http://localhost:5000}
-    container_name: planttracker-frontend
     ports:
       - "3001:80"
     restart: unless-stopped
     depends_on:
       - backend
-
-  # db:
-  #   image: postgres:15
-  #   container_name: planttracker-db
-  #   environment:
-  #     POSTGRES_USER: youruser
-  #     POSTGRES_PASSWORD: yourpass
-  #     POSTGRES_DB: yourdb
-  #   volumes:
-  #     - postgres_data:/var/lib/postgresql/data
-  #   ports:
-  #     - "5432:5432"
-
-# volumes:
-#   postgres_data:
-

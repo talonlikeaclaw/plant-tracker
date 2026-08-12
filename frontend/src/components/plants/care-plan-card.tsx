@@ -1,5 +1,4 @@
 import { PencilIcon, Trash2Icon } from "lucide-react";
-import { format } from "date-fns";
 import {
   Card,
   CardContent,
@@ -8,7 +7,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { cn, parseLocalDate } from "@/lib/utils";
+import { cn, formatDate, parseLocalDate } from "@/lib/utils";
 import type { CarePlan } from "@/types";
 
 interface CarePlanCardProps {
@@ -50,7 +49,7 @@ export function CarePlanCard({
         {plan.start_date && (
           <div className="text-sm">
             <span className="font-medium">Start Date:</span>{" "}
-            {format(parseLocalDate(plan.start_date), "PPP")}
+            {formatDate(parseLocalDate(plan.start_date), true)}
           </div>
         )}
         {plan.frequency_days && (

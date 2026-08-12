@@ -1,11 +1,10 @@
 from sqlalchemy import Column, Integer, String, DateTime
 from sqlalchemy.orm import relationship
 from app.models.database import Base
-from flask_login import UserMixin
 from datetime import datetime, timezone
 
 
-class User(Base, UserMixin):
+class User(Base):
     """Represents a User in the system"""
 
     __tablename__ = "users"

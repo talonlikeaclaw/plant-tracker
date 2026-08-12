@@ -3,7 +3,7 @@ from flask_jwt_extended import jwt_required
 from app.decorators.auth import require_user_id
 from app.models.database import SessionLocal
 from app.services.user_service import UserService
-from app.services.auth_service import AuthService
+from werkzeug.security import check_password_hash, generate_password_hash
 
 user_bp = Blueprint("user", __name__)
 
@@ -109,7 +109,6 @@ def update_password(user_id):
     """
     db = SessionLocal()
     user_service = UserService(db)
-    auth_service = AuthService(user_service)
 
     try:
         data = request.get_json()
@@ -131,8 +130,8 @@ def update_password(user_id):
                  "The new_password and confirm_password fields must match."}
             ), 400
 
-        user = auth_service.authenticate_user(email, old_password)
-        if not user:
+        user = user_service.get_user_by_email(email)
+        if not user or not check_password_hash(user.password_hash, old_password):
             return jsonify({"error": "Invalid credentials"}), 401
 
         if user.id != user_id:
@@ -140,7 +139,7 @@ def update_password(user_id):
                 "error": "Unauthorized: You may only update your own password"
             }), 403
 
-        hashed_password = auth_service.hash_password(new_password)
+        hashed_password = generate_password_hash(new_password)
         user_service.update_user(user_id, {"password_hash": hashed_password})
 
         return jsonify({"message": "Password updated successfully!"}), 200

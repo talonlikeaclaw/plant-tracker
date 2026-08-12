@@ -6,11 +6,6 @@ export async function getAllCarePlans(): Promise<CarePlan[]> {
   return res.data;
 }
 
-export async function getActiveCarePlans(): Promise<CarePlan[]> {
-  const res = await api.get("/plant-care/care-plans/active");
-  return res.data;
-}
-
 export async function createCarePlan(data: {
   plant_id: number;
   care_type_id: number;

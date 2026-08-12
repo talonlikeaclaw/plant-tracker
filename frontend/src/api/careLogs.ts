@@ -1,5 +1,5 @@
 import api from "./axios";
-import type { CareLog, UpcomingCareLog } from "@/types";
+import type { CareLog } from "@/types";
 
 export async function createCareLog(data: {
   plant_id: number;
@@ -16,11 +16,4 @@ export async function getCareLogsByPlant(
 ): Promise<{ care_logs: CareLog[] }> {
   const res = await api.get(`/plant-care/plant/${plantId}`);
   return res.data;
-}
-
-export async function getUpcomingCareForPlant(
-  plantId: number,
-  allUpcomingCare: UpcomingCareLog[],
-) {
-  return allUpcomingCare.filter((care) => care.plant_id === plantId);
 }

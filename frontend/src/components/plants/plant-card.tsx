@@ -1,4 +1,3 @@
-import { format } from "date-fns";
 import {
   PencilIcon,
   Trash2Icon,
@@ -17,7 +16,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { PlantThumbnail } from "@/components/plants/plant-thumbnail";
-import { parseLocalDate } from "@/lib/utils";
+import { formatDate, parseLocalDate } from "@/lib/utils";
 import type { Plant, PlantWithCareData } from "@/types";
 
 interface PlantCardProps {
@@ -114,7 +113,7 @@ export function PlantCard({
               <div className="flex items-center gap-2 text-sm">
                 <CalendarIcon className="h-4 w-4 text-muted-foreground shrink-0" />
                 <span className="text-muted-foreground">
-                  Added {format(parseLocalDate(plant.date_added), "PP")}
+                  Added {formatDate(parseLocalDate(plant.date_added))}
                 </span>
               </div>
             )}

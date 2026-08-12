@@ -1,10 +1,9 @@
-import { format } from "date-fns";
 import { DropletIcon, HistoryIcon } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { AuthImage } from "@/components/photos/auth-image";
-import { parseLocalDate } from "@/lib/utils";
+import { formatDate, parseLocalDate } from "@/lib/utils";
 import type { CareLog, CareType, PhotoWithSource } from "@/types";
 
 interface CareTimelineProps {
@@ -68,7 +67,7 @@ export function CareTimeline({
                       </span>
                       {log.care_date && (
                         <span className="text-xs text-muted-foreground">
-                          {format(parseLocalDate(log.care_date), "PP")}
+                          {formatDate(parseLocalDate(log.care_date))}
                         </span>
                       )}
                     </div>

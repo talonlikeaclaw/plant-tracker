@@ -17,6 +17,14 @@ export function parseLocalDate(dateString: string): Date {
   return new Date(year, month - 1, day);
 }
 
+export function formatDate(date: Date, long = false): string {
+  return date.toLocaleDateString(undefined, {
+    day: "numeric",
+    month: long ? "long" : "short",
+    year: "numeric",
+  });
+}
+
 /**
  * Return today's date (YYYY-MM-DD) in the user's local timezone.
  * Used as the default value for date inputs and care-log care_date.
@@ -33,7 +41,6 @@ type BadgeVariant = NonNullable<BadgeProps["variant"]>;
 export interface UrgencyInfo {
   label: string;
   variant: BadgeVariant;
-  className: string;
 }
 
 /**
@@ -45,23 +52,17 @@ export function getUrgencyInfo(daysUntilDue: number): UrgencyInfo {
     return {
       label: "Overdue",
       variant: "destructive",
-      className:
-        "border-destructive/50 bg-destructive text-destructive-foreground",
     };
   }
   if (daysUntilDue === 0) {
     return {
       label: "Due Today",
       variant: "warning",
-      className:
-        "border-yellow-600/50 bg-yellow-500 text-white dark:bg-yellow-600 dark:text-white",
     };
   }
   return {
     label: `Due in ${daysUntilDue} day${daysUntilDue > 1 ? "s" : ""}`,
     variant: "success",
-    className:
-      "border-green-600/50 bg-green-500 text-white dark:bg-green-600 dark:text-white",
   };
 }
 

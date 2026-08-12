@@ -1,4 +1,3 @@
-import { format } from "date-fns";
 import {
   Card,
   CardContent,
@@ -9,7 +8,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { PlantThumbnail } from "@/components/plants/plant-thumbnail";
-import { cn, getUrgencyInfo, parseLocalDate } from "@/lib/utils";
+import { cn, formatDate, getUrgencyInfo, parseLocalDate } from "@/lib/utils";
 import type { UpcomingCareLog } from "@/types";
 
 interface UpcomingCareCardProps {
@@ -74,7 +73,7 @@ export function UpcomingCareCard({
               {log.care_type} &middot; Due{" "}
               {isNaN(new Date(log.due_date).getTime())
                 ? "Invalid date"
-                : format(parseLocalDate(log.due_date), "PPP")}
+                : formatDate(parseLocalDate(log.due_date), true)}
             </CardDescription>
           </div>
 
